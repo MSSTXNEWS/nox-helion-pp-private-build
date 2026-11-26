@@ -65,6 +65,28 @@ def repin():  # REPIN_P3: убрать конкурентов с ядер тре
             open(OUT + "/repin.log", "a").write("%s pin %d %s\n" % (time.strftime("%T"), p.pid, cl[:80]))
         except Exception: pass
     return n
+SPEED = "/workspace/nox/state/speed.json"; ROUNDS = "/workspace/nox/agent/autotrain/rounds"
+def moe_ab():  # MOE_AB_P3: A/B UNSLOTH_MOE_BACKEND; ранний откат, если раунд медленнее эталона >8% или упал без шагов
+    sp = jl(SPEED, {}); be = sp.get("moe_backend")
+    if not be: return
+    ref = float(sp.get("_moe_ref_s") or 23.7); rounds = sorted(glob.glob(ROUNDS + "/r0*"), key=os.path.getmtime)
+    if not rounds: return
+    log = rounds[-1] + "/train.log"
+    if not os.path.exists(log) or os.path.getmtime(log) < float(sp.get("_moe_set_ts") or 0): return   # раунд ещё старый
+    txt = open(log, errors="replace").read()[-200000:]
+    import re as _re
+    m = _re.findall(r"скорость: ([0-9.]+) с/шаг", txt); alive = training(); verdict_ = None
+    if m:
+        v = float(m[0]); verdict_ = ("REVERT" if v > ref * 1.08 else "KEEP", v)
+    elif not alive and ("Traceback" in txt or "Error" in txt): verdict_ = ("REVERT", None)
+    elif alive and time.time() - os.path.getmtime(log) > 1500 and "шаг" not in txt: verdict_ = ("REVERT", None)
+    if not verdict_: return
+    open(OUT + "/moe_ab.log", "a").write("%s backend=%s ref=%.1f got=%s -> %s\n" % (time.strftime("%FT%TZ", time.gmtime()), be, ref, verdict_[1], verdict_[0]))
+    sp["_moe_result"] = {"backend": be, "s_per_step": verdict_[1], "ref": ref, "verdict": verdict_[0]}
+    if verdict_[0] == "REVERT":
+        sp.pop("moe_backend", None)
+        if alive: subprocess.run(["pkill", "-f", "distill_v2.py train"], capture_output=True)   # autotrain начнёт следующий раунд без ключа
+    sp.pop("_moe_set_ts", None); json.dump(sp, open(SPEED, "w"), ensure_ascii=False, indent=1)
 def training():
     return subprocess.run(["pgrep", "-f", "distill_v2.py train"], capture_output=True).returncode == 0
 def main():
@@ -78,6 +100,7 @@ def main():
                 s = (jl(f) or {}).get("cand_sha16")
                 if s and s not in done: check(f, seen); done.add(s)
             verdict()
+            moe_ab()
             if training() and time.time() - last_pin > 40: repin(); last_pin = time.time()
             g = jl(GJ, {}); b = g.get("dir")
             if b and os.path.isdir(b) and not training() and time.time() - last_touch > 25:
