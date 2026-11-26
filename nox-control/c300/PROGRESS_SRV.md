@@ -16,3 +16,5 @@
 | 2026-11-26 | K1 | Рисование при OWNER_ACTIVE: imgsvc/image_service.py — 503 korea_img_disabled/stop_flag снимаются при свежем OWNER_ACTIVE (<180 с), ветка FLUX schnell (57 с при параллельном дампе), chroma по uncensored/«без цензуры»; vision YES. Откат: touch state/draw_local_off или .bak_k1_owner*/.bak_k1_flux*. |
 | 2026-11-26 | K1 | Страж инъекций: svc/pipeline/guard_svc.py :18218 (deberta-v3-base-prompt-injection-v2, CPU, 0.2 с), pipeline_svc.verdict: q>40 или маркеры -> meta.injection + ответ по правилу, без советников. Откат: touch state/guard.off или .bak_k1_guard_*. |
 | 2026-11-26 | K1 | chain5: ответы Mistral 300/300 сняты; gpt-oss в процессе; удаление моделей и 4-bit после (srv_k119 готов). |
+| 2026-11-26 | K1 | Mistral+gpt-oss удалены после снятия ответов (300+282 в ops/teacher_answers), диск 20->44 ГБ свободно. 4-bit база: save_pretrained (unsloth, MoE) падает «No space left» при 44 ГБ свободно -> сохранение не 4-bit по размеру (эксперты не квантуются bnb); результат ОТРИЦАТЕЛЬНЫЙ, база 67 ГБ не тронута, STOP снят, bnb4-каталог пуст. Откат не нужен. |
+| 2026-11-26 | K1 | guard_svc под supervisord (nox_guard_svc, autorestart). |
