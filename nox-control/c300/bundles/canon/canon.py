@@ -34,9 +34,39 @@ def telemetry():
     except Exception: pass
     fs = [os.path.getmtime(p) for p in glob.glob(S + "/core_conv_*.json")]
     if fs: t["silence_h"] = round((time.time() - max(fs)) / 3600, 1)
+    try:
+        import urllib.request, re as _re
+        m = urllib.request.urlopen("http://127.0.0.1:9100/metrics", timeout=2).read().decode()
+        tm = [float(x) for x in _re.findall(r'^node_hwmon_temp_celsius\{[^}]*\} ([0-9.]+)', m, _re.M)]
+        if tm: t["cpu_temp"] = max(tm)
+        g = lambda k: (_re.search(r'^%s ([0-9.e+]+)' % k, m, _re.M) or [None, None])[1]
+        st, sf = g("node_memory_SwapTotal_bytes"), g("node_memory_SwapFree_bytes")
+        if st and float(st) > 0: t["swap_used_pct"] = round(100 * (1 - float(sf) / float(st)), 1)
+        t["node_exporter"] = 1
+    except Exception: pass
     t["train_running"] = 1 if sh("pgrep -f 'train_|unsloth|trl' | head -1") else 0
     return t
 # ---- disk_guard: warn + flag only, never deletes
+def s03_init():
+    """S03: append-only SQLite + FTS5 + sqlite-vec (bge-m3, dim 1024). Только схема; факты пишет конвейер памяти."""
+    import sqlite3
+    db = sqlite3.connect(S + "/s03.db"); r = {}
+    db.executescript("""CREATE TABLE IF NOT EXISTS s03(id INTEGER PRIMARY KEY, ts TEXT, source TEXT, owner TEXT, text TEXT, sha TEXT UNIQUE);
+CREATE VIRTUAL TABLE IF NOT EXISTS s03_fts USING fts5(text, content='s03', content_rowid='id');
+CREATE TRIGGER IF NOT EXISTS s03_noupd BEFORE UPDATE ON s03 BEGIN SELECT RAISE(ABORT,'S03 append-only'); END;
+CREATE TRIGGER IF NOT EXISTS s03_nodel BEFORE DELETE ON s03 BEGIN SELECT RAISE(ABORT,'S03 append-only'); END;
+CREATE TRIGGER IF NOT EXISTS s03_ai AFTER INSERT ON s03 BEGIN INSERT INTO s03_fts(rowid,text) VALUES (new.id,new.text); END;""")
+    try:
+        import sqlite_vec; db.enable_load_extension(True); sqlite_vec.load(db); db.enable_load_extension(False)
+        db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS s03_vec USING vec0(id INTEGER PRIMARY KEY, emb FLOAT[1024])")
+        r["vec_version"] = db.execute("select vec_version()").fetchone()[0]
+    except Exception as e: r["vec_error"] = type(e).__name__ + ":" + str(e)[:80]
+    # self-test in a temp row rolled back
+    try:
+        db.execute("INSERT INTO s03(ts,source,owner,text,sha) VALUES('t','selftest','x','тест поиска','selftest_sha')")
+        r["fts_hit"] = db.execute("select count(*) from s03_fts where s03_fts match 'поиска'").fetchone()[0]; db.rollback()
+    except Exception as e: r["fts_error"] = type(e).__name__
+    db.commit(); db.close(); return r
 def disk():
     f = telemetry().get("disk_free_gb"); flag = S + "/disk_low.flag"
     if f is not None and f < 15:
@@ -257,6 +287,6 @@ def daemon():
 if __name__ == "__main__":
     os.makedirs(C, exist_ok=True); c = sys.argv[1] if len(sys.argv) > 1 else "help"
     f = {"disk": disk, "backup": backup, "drive": drive_sync, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
-         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "journal": lambda: journal("manual", "ping"), "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
+         "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "s03": s03_init, "journal": lambda: journal("manual", "ping"), "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
     r = f() if f else "cmds: disk backup passport birth selfnow morning evening exam daemon feelings verify"
     print(json.dumps(r, ensure_ascii=False, indent=1) if not isinstance(r, str) else r)
