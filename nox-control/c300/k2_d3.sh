@@ -1,4 +1,4 @@
-echo "C300: k2_d2"
+echo "C300: k2_d3"
 N=/workspace/nox
 cat > /tmp/k2_draw.py <<'P'
 import http.client,json,time,sys
