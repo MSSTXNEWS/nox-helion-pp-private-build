@@ -59,3 +59,12 @@ body.dc-mini{grid-template-rows:minmax(0,1fr)}body.dc-mini .dc-head,body.dc-mini
 .dc-gl sl-card::part(base){background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 .lg-sheen{opacity:.1!important}
 body.dc-mini #dcGlassDock{display:none}
+/* v3: спокойные боковые колонки, выше контраст */
+:root{--dc-mu:var(--gx-11,#b0b4ba)}
+.dc-col h2{color:var(--gx-11,#b0b4ba);font-size:12px;letter-spacing:.06em}
+.dc-cmd,.dc-pr{border-color:transparent!important;background:transparent!important;font-size:14px;color:var(--gx-12,#edeef0)}
+.dc-cmd:hover,.dc-pr:hover{background:var(--nxb-bg-h,rgba(255,255,255,.1))!important}
+.dc-col sl-tree-item::part(label){font-size:14px}
+.dc-w{font-size:13px;color:var(--gx-11,#b0b4ba)}
+.dc-gl,#dcGlassDock,.dc-head.lg-host{--lg-tint:rgb(255 255 255 / .07)}
+.dc-sub{color:var(--gx-11,#b0b4ba)}

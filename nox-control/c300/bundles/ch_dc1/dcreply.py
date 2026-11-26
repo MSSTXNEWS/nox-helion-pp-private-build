@@ -10,9 +10,9 @@ with sync_playwright() as p:
         if pg.evaluate("!!document.querySelector('deep-chat').shadowRoot.querySelector('.dc-acts-live')"):break
         pg.wait_for_timeout(1000)
     print('acts',pg.evaluate("[...document.querySelector('deep-chat').shadowRoot.querySelectorAll('.dc-acts-live button')].map(b=>b.title)"))
-    print('click',pg.evaluate("(()=>{const b=[...document.querySelector('deep-chat').shadowRoot.querySelectorAll('.dc-acts-live button')].find(b=>b.title.indexOf('Ответить')==0);if(!b)return 'nobtn';b.click();return 'ok'})()"))
+    print('click',pg.evaluate("(()=>{const b=[...document.querySelector('deep-chat').shadowRoot.querySelectorAll('.dc-acts-live button')].find(b=>b.title==='Ответить на это сообщение');if(!b)return 'nobtn';b.click();return 'ok'})()"))
     pg.wait_for_timeout(600)
     print('reply',pg.evaluate("(document.querySelector('deep-chat').shadowRoot.querySelector('.dc-reply')||{}).innerText"),errs[:3])
     pg.evaluate("document.querySelector('deep-chat').submitUserMessage({text:'а население?'})");pg.wait_for_timeout(4000)
-    print('sent',pg.evaluate("JSON.parse(localStorage.getItem('nox.wow.threads')).find(t=>t.id==='qa-dct2').msgs.filter(m=>m.role==='user').map(m=>m.content.slice(0,80))"),errs[:3])
+    print('sent',pg.evaluate("window.NOXdc.cur().msgs.filter(m=>m.role==='user').map(m=>m.content.slice(0,80))"),errs[:2])
     b.close()
