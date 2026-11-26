@@ -3,7 +3,10 @@ from playwright.sync_api import sync_playwright
 AXE=open('/workspace/nox/tools/uiscore/node_modules/axe-core/axe.min.js').read()
 BASE='http://127.0.0.1:18091/web/'
 OUT='/workspace/nox/state/rv'; os.makedirs(OUT,exist_ok=True)
+WS=((390,844),(1440,900),(1920,1080))
 pages=sys.argv[1:]
+if pages and pages[0].startswith('--w'):
+  WS=tuple(x for x in WS if x[0]==int(pages[0][3:])); pages=pages[1:]
 JS_METRICS='''()=>{
  function deep(root,sel,acc){acc=acc||[];root.querySelectorAll(sel).forEach(e=>acc.push(e));root.querySelectorAll('*').forEach(e=>{if(e.shadowRoot)deep(e.shadowRoot,sel,acc)});return acc}
  function vis(e){var b=e.getBoundingClientRect(),s=getComputedStyle(e);return b.width>0&&b.height>0&&s.visibility!='hidden'&&s.display!='none'&&s.opacity!='0'&&b.bottom>0&&b.right>0&&b.left<innerWidth+5}
@@ -21,7 +24,7 @@ def run():
   with sync_playwright() as p:
     b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     for name in pages:
-      for w,h in ((390,844),(1440,900),(1920,1080)):
+      for w,h in WS:
         res={'page':name,'w':w}
         try:
           mob=w<500
