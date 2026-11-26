@@ -41,6 +41,7 @@ def run():
             res['contrast']=len(ax); res['contrastS']=ax[:6]
           except Exception as e: res['contrast']=-1; res['axeErr']=str(e)[:80]
           pg.screenshot(path='%s/%s_%d.jpg'%(OUT,name.replace('.html',''),w),type='jpeg',quality=72)
+          res['errs']=errs[:10]; res['nerr']=len(errs)
           if w==1440:
             cl=pg.evaluate(JS_CLICKABLES); res['nclick']=len(cl); dead=[]
             for it in cl[:45]:
@@ -56,8 +57,11 @@ def run():
                 ch=pg.evaluate("window.__rvm||0") if pg.url==u0 else 99
                 if pg.url==u0 and ch==0 and nreq[0]==0 and not dlg[0]: dead.append(it['t'])
               except Exception as e:
-                dead.append(it['t']+' ERR '+str(e)[:40])
-              if pg.url!=u0 or pg.evaluate("document.querySelectorAll('[data-rvi]').length")==0:
+                if 'destroyed' in str(e) or 'navigat' in str(e).lower(): pass
+                else: dead.append(it['t']+' ERR '+str(e)[:40])
+              try: gone=pg.url!=u0 or pg.evaluate("document.querySelectorAll('[data-rvi]').length")==0
+              except Exception: gone=True
+              if gone:
                 pg.goto(BASE+name,wait_until='load'); pg.wait_for_timeout(1500); pg.evaluate(JS_CLICKABLES)
             res['dead']=dead[:15]; res['ndead']=len(dead)
             links=sorted({x['href'] for x in cl if x['href'] and not x['href'].startswith(('#','javascript','mailto','http'))})
@@ -68,7 +72,6 @@ def run():
                 if r.status>=400: bad.append('%d %s'%(r.status,l))
               except Exception as e: bad.append('ERR '+l)
             res['badlinks']=bad
-          res['errs']=errs[:10]; res['nerr']=len(errs)
           c.close()
         except Exception as e:
           res['fatal']=repr(e)[:160]
