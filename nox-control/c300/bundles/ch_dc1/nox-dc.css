@@ -85,3 +85,8 @@ body.dc-mini #dcGlassDock{display:none}
 .dc-col sl-card::part(base){border-radius:16px}
 .dc-col h2{font-size:13px;font-weight:650;margin-bottom:14px}
 @media(min-width:1440px){.dc-col{padding:8px 4px}}
+
+/* v6 (WEB): система - 4 крупные метрики */
+.dc-c5 .dc-w{display:block;padding:10px 0 2px;font-size:13px;color:var(--gx-11,#b0b4ba)}
+.dc-c5 .dc-w b{display:block;font-size:30px;font-weight:650;line-height:1.1;color:var(--gx-12,#edeef0);margin-top:2px}
+.dc-c5 .dc-pb{--height:6px;margin:6px 0 14px}
