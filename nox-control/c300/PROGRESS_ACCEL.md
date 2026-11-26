@@ -1,0 +1,2 @@
+# PROGRESS_ACCEL (ускоритель)
+- 2026-11-26 13:30 | круг 1 (разведка): GPU util тренера 50-82% (ср. ~68%), VRAM 35.7/48 ГБ (74%), load 28/16; тренер affinity 0-3,16-19; subbase-qwen30B 800% CPU nice 10; диск /workspace 5.7 ГБ свободно (мин 2.2 на записи ckpt) - КРИТИЧНО, сообщено координатору. Стек: torch 2.14.1+cu130, unsloth 2026.11.9, peft 0.21.3, transformers 5.17, liger НЕТ. Следующее: A/B Liger (после решения по диску), cpu-pin subbase.
