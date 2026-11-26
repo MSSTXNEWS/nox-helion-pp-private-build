@@ -54,7 +54,7 @@ def run():
                 pg.evaluate("window.__rvm=0;window.__rvo&&window.__rvo.disconnect();window.__rvo=new MutationObserver(m=>window.__rvm+=m.length);window.__rvo.observe(document,{subtree:true,childList:true,attributes:true,characterData:true})")
               except Exception: pass
               nreq=[0]; pg.on('request',lambda r:nreq.__setitem__(0,nreq[0]+1))
-              u0=pg.url; dlg=[0]; pg.once('dialog',lambda d:(dlg.__setitem__(0,1),d.dismiss()))
+              u0=pg.url; dlg=[0]; pg.once('dialog',lambda d:dlg.__setitem__(0,1))
               try:
                 pg.click('[data-rvi="%d"]'%it['i'],timeout=1500,force=True,no_wait_after=True); pg.wait_for_timeout(350)
                 ch=pg.evaluate("window.__rvm||0") if pg.url==u0 else 99
