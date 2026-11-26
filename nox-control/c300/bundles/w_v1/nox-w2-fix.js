@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   if (/[?&]w2=0/.test(location.search)) return;
-  addEventListener('unhandledrejection', function (e) { var m = String((e.reason && (e.reason.message || e.reason)) || ''); if (/Transition was aborted|invalid state|AbortError/i.test(m)) e.preventDefault(); });
+  addEventListener('unhandledrejection', function (e) { var m = String((e.reason && (e.reason.message || e.reason)) || ''); if (/Transition was aborted/.test(m)) e.preventDefault(); });
   function guard(img) {
     if (img.dataset.nxg) return; img.dataset.nxg = '1';
     img.addEventListener('error', function () { img.style.visibility = 'hidden'; var p = img.parentElement; if (p && !p.dataset.nxph) { p.dataset.nxph = '1'; p.style.background = 'rgba(255,255,255,.06)'; } }, { once: true });

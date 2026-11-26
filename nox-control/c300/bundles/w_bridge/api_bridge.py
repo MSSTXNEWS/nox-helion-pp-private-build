@@ -193,6 +193,7 @@ async def sci_semantic(request):
     try:
         async with ClientSession(timeout=ClientTimeout(total=15)) as c:
             async with c.get('https://api.semanticscholar.org/graph/v1/paper/search', params={'limit': '8', 'fields': 'title,year,authors,externalIds,url,venue', 'query': q}) as r:
+                if r.status == 429: return web.json_response(hold('Semantic Scholar: лимит запросов без ключа (HTTP 429), повторите позже', data=[]))
                 if r.status != 200: return web.json_response(hold('Semantic Scholar: HTTP %s' % r.status, data=[]))
                 return web.json_response(await r.json())
     except Exception as ex:
