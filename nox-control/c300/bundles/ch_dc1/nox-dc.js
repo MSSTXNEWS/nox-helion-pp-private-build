@@ -56,7 +56,9 @@ function strip(){var root=dc.shadowRoot;if(!root||root.querySelector('.dc-strip'
 function qvis(){if(window.__dcQ)window.__dcQ.style.display=cur.msgs.length?'none':'flex'}
 dc.auxiliaryStyle+='.dc-strip{position:absolute;left:0;right:0;bottom:66px;z-index:2;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;padding:0 8px}#chat-view{position:relative}#messages{padding-bottom:48px!important}.dc-seg{display:inline-flex;border:1px solid var(--gx-6,#363a3f);border-radius:8px;overflow:hidden}.dc-seg button,.dc-q button{height:28px;padding:0 10px;border:0;background:transparent;color:var(--gx-11,#b0b4ba);font:inherit;font-size:12px;cursor:pointer}.dc-seg button.on{background:var(--gx-5,#2e3135);color:var(--gx-12,#edeef0)}.dc-q{display:flex;gap:6px;flex-wrap:wrap}.dc-q button{border:1px solid var(--gx-6,#363a3f);border-radius:8px}.dc-q button:hover,.dc-seg button:hover{background:var(--nxb-bg-h,rgba(255,255,255,.1));color:var(--gx-12,#edeef0)}';
 dc.addEventListener&&dc.addEventListener('render',function(){strip()});
-[400,1200,2500].forEach(function(t){setTimeout(strip,t)});
+function lab(){var r=dc.shadowRoot;if(!r)return;var ti=r.querySelector('#text-input');if(ti&&!ti.getAttribute('aria-label'))ti.setAttribute('aria-label','Сообщение для NOX');
+ r.querySelectorAll('#input button,#input [role=button],#input .input-button').forEach(function(e){if(e.getAttribute('aria-label'))return;var h=((e.id||'')+' '+(e.className&&e.className.baseVal!==undefined?e.className.baseVal:e.className)+' '+(e.innerHTML||'').slice(0,120)).toLowerCase();e.setAttribute('aria-label',/mic|speech|record/.test(h)?'Голосовой ввод':/submit|send/.test(h)?'Отправить':'Прикрепить файл');if(!e.getAttribute('role')&&e.tagName!=='BUTTON')e.setAttribute('role','button')})}
+[400,1200,2500].forEach(function(t){setTimeout(function(){strip();lab()},t)});setInterval(lab,2500);
 function actsFor(text,meta,via){
  var root=dc.shadowRoot;if(!root)return;
  var msgs=root.querySelectorAll('.outer-message-container');var last=msgs[msgs.length-1];if(!last)return;
