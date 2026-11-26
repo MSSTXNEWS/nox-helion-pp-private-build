@@ -15,6 +15,7 @@ if(document.head&&!document.querySelector('script[src*="nox-k8-meta"]')){const a
     const bar = document.createElement('div'); bar.className = 'cw-bar';
     bar.innerHTML = '<sl-button size="small" outline data-p="cmd" aria-haspopup="true">⚙ Режимы</sl-button><sl-button size="small" outline data-p="pr" aria-haspopup="true">Шаблоны</sl-button><sl-button size="small" outline data-p="sys" class="cw-sysbtn" aria-haspopup="true">Система</sl-button><span class="cw-chips" role="group" aria-label="Подсказки"></span>';
     form.insertBefore(bar, comp);
+    const nb = document.createElement('sl-button'); nb.size = 'small'; nb.outline = true; nb.className = 'cw-notebtn'; nb.setAttribute('aria-label', 'Блокнот'); nb.title = 'Блокнот'; nb.innerHTML = '<sl-icon library="tabler" name="notebook"></sl-icon>'; nb.addEventListener('click', (e) => { e.stopPropagation(); try { window.NOXNote && window.NOXNote.toggle(); } catch (x) { } }); bar.appendChild(nb);
     const closeAll = () => ['cmd', 'pr', 'sys'].forEach((k) => B.classList.remove('cw-open-' + k));
     bar.addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; const k = b.dataset.p, was = B.classList.contains('cw-open-' + k); closeAll(); if (!was) B.classList.add('cw-open-' + k); e.stopPropagation(); });
     document.addEventListener('click', (e) => { if (!e.target.closest('.cx5-cmd,.cx5-pr,.cx-right,.cw-bar')) closeAll(); });

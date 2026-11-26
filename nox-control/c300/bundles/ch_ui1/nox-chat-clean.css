@@ -150,3 +150,22 @@ body.cw-clean #feed #k7-rel .k7-chip:hover{background:var(--cw-bgh)}
  body.cw-clean #feed .m.a .acts button,body.cw-clean #feed .m.a .acts .cw-pin{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important}
  body.cw-clean #feed .rq-meta .rq-qk::part(base),body.cw-clean #feed #k7-rel .k7-chip,body.cw-clean #feed sl-details.rq-think::part(header){min-height:44px;height:44px}
 }
+/* солнце-логотип не перекрывает шапку чата; блокнот на мобильном - кнопка в панели вместо боковой вкладки */
+body.cw-clean .tg-head{margin-top:20px!important}
+.cw-notebtn{display:none}
+@media(max-width:600px){
+ body.cw-clean .tg-head{margin-top:8px!important}
+ body.cw-clean #u-tab{display:none!important}
+ body.cw-clean .cw-notebtn{display:inline-flex;margin-left:auto}
+ body.cw-clean .cw-notebtn::part(base){width:36px;padding:0;justify-content:center}
+}
+@media (pointer:coarse){body.cw-clean .cw-notebtn::part(base){width:44px}}
+@media(max-width:600px){
+ body.cw-clean .cw-bar{gap:6px!important;padding:0 10px!important;overflow:visible!important}
+ body.cw-clean .cw-bar sl-button{flex:1 1 0;min-width:0}
+ body.cw-clean .cw-bar .cw-notebtn{flex:0 0 44px}
+ body.cw-clean .cw-bar sl-button::part(base){padding:0 6px!important}
+ body.cw-clean .cw-bar sl-button::part(label){padding:0;overflow:hidden;text-overflow:ellipsis}
+}
+body.cw-clean #feed .rq-meta .rq-qk::part(base){display:flex;align-items:center;justify-content:center;line-height:1}
+body.cw-clean #feed .rq-meta .rq-qk::part(label){padding:0;line-height:1}
