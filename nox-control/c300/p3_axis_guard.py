@@ -72,7 +72,7 @@ def moe_ab():  # MOE_AB_P3: A/B UNSLOTH_MOE_BACKEND; ранний откат, е
     ref = float(sp.get("_moe_ref_s") or 23.7); rounds = sorted(glob.glob(ROUNDS + "/r0*"), key=os.path.getmtime)
     if not rounds: return
     log = rounds[-1] + "/train.log"
-    if not os.path.exists(log) or os.path.getmtime(log) < float(sp.get("_moe_set_ts") or 0): return   # раунд ещё старый
+    if not os.path.exists(log) or os.path.basename(rounds[-1]) <= str(sp.get("_moe_after_round") or "r999"): return   # ждём раунд, начатый после установки ключа
     txt = open(log, errors="replace").read()[-200000:]
     import re as _re
     m = _re.findall(r"скорость: ([0-9.]+) с/шаг", txt); alive = training(); verdict_ = None
@@ -86,7 +86,7 @@ def moe_ab():  # MOE_AB_P3: A/B UNSLOTH_MOE_BACKEND; ранний откат, е
     if verdict_[0] == "REVERT":
         sp.pop("moe_backend", None)
         if alive: subprocess.run(["pkill", "-f", "distill_v2.py train"], capture_output=True)   # autotrain начнёт следующий раунд без ключа
-    sp.pop("_moe_set_ts", None); json.dump(sp, open(SPEED, "w"), ensure_ascii=False, indent=1)
+    sp.pop("_moe_set_ts", None); sp.pop("_moe_after_round", None); json.dump(sp, open(SPEED, "w"), ensure_ascii=False, indent=1)
 def training():
     return subprocess.run(["pgrep", "-f", "distill_v2.py train"], capture_output=True).returncode == 0
 def main():
