@@ -17,6 +17,16 @@ function media(){var cv=document.getElementById('rs-cv');if(!cv||document.getEle
   if(rid==='music'){var w=document.createElement('div');w.id='rx-wave';w.className='rx-med';m.insertBefore(w,hold);var pp=document.createElement('sl-button');pp.className='rx-med';pp.setAttribute('variant','primary');pp.textContent='Играть / пауза';row.appendChild(pp);
    import('./vendor/wavesurfer.js/dist/wavesurfer.esm.js').then(function(M){var WS=M.default||M;var ws=WS.create({container:w,url:u,waveColor:'#7b8794',progressColor:'#9db1d1',height:72});pp.addEventListener('click',function(){ws.playPause()})}).catch(function(){w.textContent='Не удалось загрузить wavesurfer'})}
   else{var v=document.createElement('video');v.className='rx-med';v.controls=true;v.src=u;v.setAttribute('aria-label','Видео');m.insertBefore(v,hold)}})}
-function go(){fetch('./roles.json?v='+Date.now()).then(function(r){return r.json()}).then(function(c){tiles(c)}).catch(function(){});var n=0,iv=setInterval(function(){media();if(document.getElementById('rs-media')||++n>40||['music','video','cinema'].indexOf(rid)<0)clearInterval(iv)},300)}
+
+/* Учёный: KaTeX (vendor) для формул в просмотре и ответах; поиск источников: HOLD, пока API поиска NOX не подключён */
+function sci(){if(rid!=='scientist')return;
+ var l=document.createElement('link');l.rel='stylesheet';l.href='./vendor/katex/katex.min.css';document.head.appendChild(l);
+ function sc(u){return new Promise(function(ok,no){var e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
+ sc('./vendor/katex/katex.min.js').then(function(){return sc('./vendor/katex/auto-render.min.js')}).then(function(){
+  var D=[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false}];var t=0;
+  function run(){['#rs-pvb','#rs-f'].forEach(function(q){var e=document.querySelector(q);if(e&&window.renderMathInElement){try{window.renderMathInElement(e,{delimiters:D,throwOnError:false})}catch(x){}}})}
+  new MutationObserver(function(){clearTimeout(t);t=setTimeout(run,400)}).observe(document.body,{childList:true,subtree:true});run()}).catch(function(){});
+ var n=0,iv=setInterval(function(){var cv=document.getElementById('rs-cv');if(cv&&!document.getElementById('rs-media')){clearInterval(iv);var m=document.createElement('div');m.id='rs-media';var p=document.createElement('p');p.className='rx-hold';p.textContent='Поиск источников: HOLD, поисковый API NOX не подключён. Источники вставляйте сами (DOI, ссылки); формулы в записи $...$ и $$...$$ отображаются в «Просмотре» и в ответах. Ничего не выдумываю: нет данных, значит HOLD.';m.appendChild(p);cv.appendChild(m)}if(++n>40)clearInterval(iv)},300)}
+function go(){sci();fetch('./roles.json?v='+Date.now()).then(function(r){return r.json()}).then(function(c){tiles(c)}).catch(function(){});var n=0,iv=setInterval(function(){media();if(document.getElementById('rs-media')||++n>40||['music','video','cinema'].indexOf(rid)<0)clearInterval(iv)},300)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();
 })();

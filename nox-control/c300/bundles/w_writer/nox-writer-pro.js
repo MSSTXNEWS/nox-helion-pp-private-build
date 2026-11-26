@@ -5,14 +5,14 @@ var KEY='nox.wr.v1',root=null,S,API,cm;
 
 /* ---- серверное хранение через существующий /api/notes (как блокнот): куски JSON writer-b1-NNN ---- */
 var BID='writer-b1-',CH=3500,pt=0,Q=Promise.resolve();
-function seq(f){Q=Q.then(f,f);return Q}
+function seq(f){var g=function(){return navigator.locks?navigator.locks.request('nox-notes',f):f()};Q=Q.then(g,g);return Q}
 function st(t){var e=document.getElementById('wr-sync');if(e)e.textContent=t}
 function jget(){return fetch('/api/notes',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})}
 function push(){clearTimeout(pt);pt=setTimeout(function(){seq(push0)},2000)}
 async function push0(){try{var j=await jget();if(!j){st('только в браузере');return}var list=(j.notes||[]).filter(function(n){return !(n&&String(n.id).indexOf(BID)===0)});
  var srv=(j.notes||[]).filter(function(n){return n&&String(n.id).indexOf(BID)===0});if(srv.length){var sts=0;try{sts=JSON.parse(srv[0].text.slice(0,40).match(/"ts":(\d+)/)[1])}catch(e){}}
  var txt=JSON.stringify(S),n=0;for(var i=0;i<txt.length;i+=CH){list.push({id:BID+('000'+(n++)).slice(-3),text:txt.slice(i,i+CH),ts:S.ts/1000})}
- var r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});st(r.ok?'синхронизировано':'только в браузере')}catch(e){st('только в браузере')}}
+ var r=await fetch('/api/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:list})});if(r.ok){var v=await jget();var have=v&&(v.notes||[]).filter(function(x){return x&&String(x.id).indexOf(BID)===0}).length;if(have!==n&&!push0.r){push0.r=1;setTimeout(function(){push0.r=0;seq(push0)},1500)}}st(r.ok?'синхронизировано':'только в браузере')}catch(e){st('только в браузере')}}
 async function pull(){var j=await jget();if(!j)return false;var p=(j.notes||[]).filter(function(n){return n&&String(n.id).indexOf(BID)===0}).sort(function(a,b){return a.id<b.id?-1:1});if(!p.length)return false;
  try{var o=JSON.parse(p.map(function(n){return n.text}).join(''));if(o&&o.chapters&&o.chapters.length&&(o.ts||0)>(S.ts||0)+1000){S=o;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}return true}}catch(e){}return false}
 /* ---- диалоги sl-dialog вместо prompt/confirm ---- */
