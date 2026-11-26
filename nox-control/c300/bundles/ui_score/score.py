@@ -43,7 +43,7 @@ def lh_one(job):
     cmd=[LH,url(pg,vp),'--only-categories=accessibility,best-practices,performance','--output=json','--output-path='+out,'--quiet','--chrome-flags=--headless --no-sandbox --disable-gpu','--form-factor='+('mobile' if mob else 'desktop')]
     if not mob: cmd+=['--screenEmulation.mobile=false','--screenEmulation.width=1440','--screenEmulation.height=900','--screenEmulation.deviceScaleFactor=1']
     if cp: cmd+=['--chrome-path='+cp[0]]
-    try: r=subprocess.run(cmd,capture_output=True,text=True,timeout=150,env={**os.environ,'PATH':'/workspace/nox/tools/node/bin:'+os.environ['PATH']})
+    try: r=subprocess.run(cmd,capture_output=True,text=True,timeout=150,env={**os.environ,'CHROME_PATH':(cp[0] if cp else ''),'PATH':'/workspace/nox/tools/node/bin:'+os.environ['PATH']})
     except Exception as e: return (pg,vp,'TIMEOUT '+str(e)[:50])
     return (pg,vp,'ok' if os.path.exists(out) else 'FAIL '+(r.stderr or r.stdout)[-150:])
 def lh(pgs,par=6):
