@@ -7,7 +7,7 @@ def vision(path):
     q="Это скриншот окна чата с ИИ. Оцени по шкале 0-10: A) удобство и ясность, R) аккуратность вёрстки (выравнивание, отступы, пустое место), WOW) визуальное впечатление. Ответь строго одной строкой JSON: {\"A\":n,\"R\":n,\"WOW\":n,\"issues\":\"до 25 слов, что кривое\"}"
     body={"model":"x","max_tokens":160,"temperature":0,"chat_template_kwargs":{"enable_thinking":False},"messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+b}},{"type":"text","text":q}]}]}
     rq=urllib.request.Request("http://127.0.0.1:8104/v1/chat/completions",data=json.dumps(body).encode(),headers={"Content-Type":"application/json"})
-    try: return json.load(urllib.request.urlopen(rq,timeout=280))["choices"][0]["message"]["content"].strip()[:300]
+    try: return json.load(urllib.request.urlopen(rq,timeout=500))["choices"][0]["message"]["content"].strip()[:300]
     except Exception as e: return 'ERR '+repr(e)[:100]
 with sync_playwright() as p:
     b=p.chromium.launch()
