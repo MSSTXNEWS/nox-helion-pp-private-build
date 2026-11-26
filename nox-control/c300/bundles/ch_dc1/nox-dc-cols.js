@@ -30,7 +30,13 @@ function flat(o,p,out){out=out||[];Object.keys(o||{}).forEach(function(k){var v=
 function widgets(){var box=$('#dcW');if(!box)return;var c=card('Система');var h=el('div','dc-w','загрузка…');c.appendChild(h);box.textContent='';box.appendChild(c);
  function upd(){fetch('/api/nox-live',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){var f=flat(j);h.parentNode&&(function(){c.querySelectorAll('.dc-w').forEach(function(x){x.remove()});if(!f.length){c.appendChild(el('div','dc-w','нет числовых данных'));return}f.slice(0,10).forEach(function(x){var r=el('div','dc-w');r.appendChild(el('span','',x[0].split('.').slice(-2).join(' ')));r.appendChild(el('b','',Math.abs(x[1])>=100?String(Math.round(x[1])):String(Math.round(x[1]*100)/100)));c.appendChild(r)})})()}).catch(function(){})}
  upd();setInterval(upd,15000)}
-function init(){if(!D()){return setTimeout(init,300)}left();quick();prompts();widgets()}
+function build(){var g=$('#dcGrid');if(!g||g.querySelector('sl-split-panel'))return;var L=$('#dcL'),Q=$('#dcQ'),P=$('#dcP'),W=$('#dcW'),M=g.querySelector('.dc-main');
+ var sa=document.createElement('sl-split-panel'),sb=document.createElement('sl-split-panel');sa.setAttribute('primary','start');sb.setAttribute('primary','end');
+ var pa=+LS.g('nox.dc.spA',460),pb=+LS.g('nox.dc.spB',520);sa.positionInPixels=pa;sb.positionInPixels=pb;
+ sa.addEventListener('sl-reposition',function(){LS.s('nox.dc.spA',String(Math.round(sa.positionInPixels)))});sb.addEventListener('sl-reposition',function(){LS.s('nox.dc.spB',String(Math.round(sb.positionInPixels)))});
+ var l=el('div','dc-grp');l.slot='start';l.appendChild(L);l.appendChild(Q);var r=el('div','dc-grp');r.slot='end';r.appendChild(P);r.appendChild(W);
+ var mid=el('div','');mid.slot='end';mid.style.cssText='height:100%;min-width:0';sb.style.setProperty('--min','400px');M.slot='start';M.style.height='100%';sb.appendChild(M);sb.appendChild(r);mid.appendChild(sb);sa.appendChild(l);sa.appendChild(mid);g.appendChild(sa)}
+function init(){if(!D()){return setTimeout(init,300)}build();left();quick();prompts();widgets()}
 if(matchMedia('(min-width:1440px)').matches)init();
 matchMedia('(min-width:1440px)').addEventListener('change',function(e){if(e.matches)init()});
 })();
