@@ -13,7 +13,6 @@ $$('input:not([aria-label]):not([aria-labelledby]):not([type=hidden])',function(
 $$('.FIE_crop-tool[aria-selected]',function(e){e.removeAttribute('aria-selected')});
 $$('[aria-selected]:not([role]),.FIE_tab[aria-selected],.FIE_crop-tool[aria-selected]',function(e){var r=e.getAttribute('role');if(r==='tab'||r==='option'||r==='treeitem')return;var v=e.getAttribute('aria-selected');e.removeAttribute('aria-selected');if(!e.hasAttribute('role'))e.setAttribute('role','button');e.setAttribute('aria-pressed',v)});
 $$('button:not([aria-label])',function(e){if(e.textContent.trim()||e.getAttribute('aria-labelledby')||e.querySelector('img[alt]'))return;e.setAttribute('aria-label',e.title||e.getAttribute('data-tooltip')||'Кнопка')});
-$$('.fc-scrollgrid, .fc-scrollgrid table, .fc-scrollgrid [role=rowgroup], .fc-scrollgrid [role=row], .fc-scrollgrid [role=columnheader], .fc-scrollgrid [role=gridcell]',function(e){if(e.getAttribute('role')!=='presentation')e.setAttribute('role','presentation')});
 $$('.fc-icon[role=img]',function(e){e.removeAttribute('role');e.setAttribute('aria-hidden','true')});
 $$('.fc-scroller:not([tabindex]),.fc-view:not([tabindex]),.fc-scroller-harness:not([tabindex])',function(e){e.setAttribute('tabindex','0')});
 $$('#k4-nl > h3',function(e){e.setAttribute('aria-level','2')});
