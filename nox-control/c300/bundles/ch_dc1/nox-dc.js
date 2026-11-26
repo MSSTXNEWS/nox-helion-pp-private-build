@@ -8,7 +8,7 @@ var cur=null;
 function save(){LS.s('nox.wow.threads',JSON.stringify(threads.slice(0,40).map(function(t){return Object.assign({},t,{msgs:t.msgs.slice(-80)})})));LS.s('nox.wow.cur',cur?cur.id:'')}
 function pick(){var id=LS.g('nox.wow.cur','');cur=threads.find(function(t){return t.id===id})||null;if(!cur){cur={id:id||uid(),title:'Новый диалог',ts:Date.now(),msgs:[],srv:false};threads.unshift(cur)}}
 pick();
-var dc=$('#chat');
+var dc=$('#chat');var MINI=/[?&]mini=1/.test(location.search);var CTX=decodeURIComponent((location.search.match(/[?&]ctx=([^&]*)/)||[])[1]||'');if(MINI)document.body.classList.add('dc-mini');
 var think=function(s){return s.replace(/<think>[\s\S]*?(<\/think>|$)/gi,'').replace(/^\s+/,'')};
 function toast(t,ms){var e=$('#dcToast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){e.hidden=true},ms||4000)}
 window.NOXdcToast=toast;
@@ -23,7 +23,9 @@ dc.messageStyles={default:{shared:{bubble:{borderRadius:'12px',padding:'8px 12px
 dc.textInput={styles:{container:{backgroundColor:V('--gx-3'),border:'1px solid '+V('--gx-6'),borderRadius:'14px',margin:'0 8px 10px',padding:'2px 4px'},text:{color:V('--gx-12'),fontSize:'15px'}},placeholder:{text:'Напишите сообщение…',style:{color:V('--gx-10')}}};
 dc.submitButtonStyles={submit:{container:{default:{backgroundColor:V('--gx-acc'),borderRadius:'8px',width:'32px',height:'32px'}},svg:{styles:{default:{filter:'brightness(0.15)'}}}}};
 dc.auxiliaryStyle='::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--gx-6,#363a3f);border-radius:4px}#messages{padding:12px 12px 4px}.dc-acts{display:flex;gap:6px;margin:4px 0 10px 22px;flex-wrap:wrap}.dc-acts button{height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--gx-6,#363a3f);background:var(--nxb-bg,rgba(255,255,255,.055));color:var(--gx-11,#b0b4ba);font:inherit;font-size:12px;cursor:pointer}.dc-acts button:hover{background:var(--nxb-bg-h,rgba(255,255,255,.1));color:var(--gx-12,#edeef0)}.dc-via{margin:2px 0 0 22px;font-size:11px;color:var(--gx-10,#777b84)}.dc-k8{margin:2px 0 4px 22px;font-size:12px;color:var(--gx-10,#777b84)}.dc-k8 .k8-conf{height:3px;background:var(--gx-5,#2e3135);border-radius:2px;width:120px}.dc-k8 .k8-conf i{display:block;height:100%;background:var(--gx-acc,#9db1d1);border-radius:2px}.dc-k8 details{margin-top:2px}.dc-k8 ul{margin:4px 0;padding-left:18px}pre{background:var(--gx-2,#18191b)!important;border:1px solid var(--gx-6,#363a3f);border-radius:8px;padding:10px;overflow:auto}code{font-size:13px}';
-dc.introMessage={text:'Привет! Я NOX. Спросите что угодно: отвечу, найду, напишу, посчитаю.'};
+var QS=['Что умеешь','Кратко опиши, что ты умеешь делать на этом сервере.','План дня','Составь план работы на сегодня из моих текущих задач и спроси, чего не хватает.','Проверить голос','Объясни по шагам, как проверить, что голосовой ввод и озвучка работают.','Идеи','Придумай три идеи, как улучшить интерфейс Резонанса, и оцени каждую.'];
+var QH='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';for(var qi=0;qi<QS.length;qi+=2)QH+='<button class="deep-chat-suggestion-button" style="height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--gx-6,#363a3f);background:transparent;color:var(--gx-11,#b0b4ba);font:inherit;font-size:12px;cursor:pointer">'+QS[qi]+'</button>';QH+='</div>';
+dc.introMessage={html:'<div>Привет! Я NOX. Спросите что угодно: отвечу, найду, напишу, посчитаю.</div>'+QH};
 dc.demo=false;
 dc.stream=true;
 dc.textInput.disabled=false;
@@ -50,10 +52,9 @@ function strip(){var root=dc.shadowRoot;if(!root||root.querySelector('.dc-strip'
  var seg=document.createElement('div');seg.className='dc-seg';
  [['auto','Авто'],['fast','Быстро'],['deep','Глубоко']].forEach(function(x){var b=document.createElement('button');b.type='button';b.textContent=x[1];b.dataset.m=x[0];if(x[0]===m)b.className='on';b.onclick=function(){cfgS('mode',x[0]);seg.querySelectorAll('button').forEach(function(y){y.className=y===b?'on':''})};seg.appendChild(b)});
  d.appendChild(seg);
- var q=document.createElement('div');q.className='dc-q';
- [['Что умеешь','Кратко опиши, что ты умеешь делать на этом сервере.'],['План дня','Составь план работы на сегодня из моих текущих задач и спроси, чего не хватает.'],['Проверить голос','Объясни по шагам, как проверить, что голосовой ввод и озвучка работают.'],['Идеи','Придумай три идеи, как улучшить интерфейс Резонанса, и оцени каждую.']].forEach(function(x){var b=document.createElement('button');b.type='button';b.textContent=x[0];b.onclick=function(){dc.submitUserMessage({text:x[1]})};q.appendChild(b)});
- d.appendChild(q);inp.parentNode.insertBefore(d,inp);window.__dcQ=q;qvis()}
-function qvis(){if(window.__dcQ)window.__dcQ.style.display=cur.msgs.length?'none':'flex'}
+
+ inp.parentNode.insertBefore(d,inp);}
+function qvis(){}
 dc.auxiliaryStyle+='.dc-strip{position:absolute;left:0;right:0;bottom:66px;z-index:2;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;padding:0 8px}#chat-view{position:relative}#messages{padding-bottom:48px!important}.dc-seg{display:inline-flex;border:1px solid var(--gx-6,#363a3f);border-radius:8px;overflow:hidden}.dc-seg button,.dc-q button{height:28px;padding:0 10px;border:0;background:transparent;color:var(--gx-11,#b0b4ba);font:inherit;font-size:12px;cursor:pointer}.dc-seg button.on{background:var(--gx-5,#2e3135);color:var(--gx-12,#edeef0)}.dc-q{display:flex;gap:6px;flex-wrap:wrap}.dc-q button{border:1px solid var(--gx-6,#363a3f);border-radius:8px}.dc-q button:hover,.dc-seg button:hover{background:var(--nxb-bg-h,rgba(255,255,255,.1));color:var(--gx-12,#edeef0)}';
 dc.addEventListener&&dc.addEventListener('render',function(){strip()});
 function lab(){var r=dc.shadowRoot;if(!r)return;r.querySelectorAll('input:not([aria-label]),textarea:not([aria-label])').forEach(function(e){e.setAttribute('aria-label',e.type==='file'?'Выбрать файл':'Поле ввода')});var ti=r.querySelector('#text-input');if(ti&&!ti.getAttribute('aria-label'))ti.setAttribute('aria-label','Сообщение для NOX');
@@ -93,7 +94,7 @@ dc.connect={stream:true,handler:function(body,signals){
  var ctrl=new AbortController();busy={ctrl:ctrl,turn:null};
  var raw='',sent='',meta=null,done=null,opened=false;
  signals.stopClicked.listener=function(){var b=busy;if(!b)return;try{fetch('/api/turn/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:cur.id,turn_id:b.turn||undefined})}).catch(function(){})}catch(e){}setTimeout(function(){ctrl.abort()},1200)};
- var reqBody={conversation_id:cur.id,message:text,mode:'auto',length:'normal',source:'full'};
+ var reqBody={conversation_id:cur.id,message:(MINI&&CTX?'[Пользователь сейчас на странице «'+CTX+'»]\n':'')+text,mode:'auto',length:'normal',source:'full'};
  if(!cur.srv)reqBody.seed=cur.msgs.slice(0,-1).slice(-20).map(function(m){return{role:m.role,content:m.content}});
  signals.onOpen();opened=true;qvis();
  Promise.all(files.map(upload)).then(function(rs){var at=rs.filter(Boolean).map(function(r){return{id:r.id}});if(at.length)reqBody.attachments=at;reqBody.mode=cfgG().mode||'auto';
