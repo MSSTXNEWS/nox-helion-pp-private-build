@@ -24,7 +24,7 @@
   var BS = 'min-height:44px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:14px;cursor:pointer;';
   function card(url, prompt, shown, sec, size) {
     return '<div class="nxg" style="max-width:min(100%,520px)">' +
-      '<a href="' + esc(url) + '" target="_blank" rel="noopener" aria-label="Открыть картинку целиком"><img src="' + esc(url) + '" alt="' + esc(shown) + '" loading="lazy" style="display:block;width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)"></a>' +
+      '<a href="' + esc(url) + '" target="_blank" rel="noopener" aria-label="Открыть картинку целиком"><img src="' + esc(url) + '" alt="' + esc(shown) + '" loading="lazy" style="display:block;max-width:100%;max-height:52vh;width:auto;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)"></a>' +
       '<div style="margin:8px 2px 10px;font-size:13px;opacity:.72;line-height:1.4">' + esc(shown.slice(0, 160)) + ' · ' + esc(size) + (sec ? ' · ' + esc(sec) + ' с' : '') + '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       '<button type="button" data-nxg="dl" data-url="' + esc(url) + '" style="' + BS + '">Скачать</button>' +
@@ -41,6 +41,7 @@
       .then(function (r) {
         var url = '/img/file?p=' + encodeURIComponent(r.j.path);
         signals.onResponse({ html: card(url, prompt, prompt, r.j.seconds ? Math.round(r.j.seconds) : '', '1024×1024') });
+        [120, 600, 1600].forEach(function (t) { setTimeout(down, t); });
         if (T) { T.msgs.push({ role: 'assistant', content: '![' + prompt.replace(/[\[\]\n]/g, ' ') + '](' + url + ')\n\n' + prompt, ts: Date.now() }); NOXdc.save(); }
       })
       .catch(function (e) {
@@ -49,6 +50,7 @@
       })
       .then(function () { signals.onClose(); });
   } });
+  function down() { var r = dc.shadowRoot, m = r && r.querySelector('#messages'); if (m) m.scrollTop = m.scrollHeight; var l = r && r.querySelectorAll('.nxg img'); if (l && l.length && !l[l.length - 1].complete) l[l.length - 1].addEventListener('load', down, { once: true }); }
   function bind() {
     var r = dc.shadowRoot; if (!r) return setTimeout(bind, 400);
     r.addEventListener('click', function (e) {
