@@ -7,7 +7,7 @@
   function inject() { var sr = dc.shadowRoot; if (!sr) return setTimeout(inject, 400); if (sr.getElementById('nxfix')) return; var s = document.createElement('style'); s.id = 'nxfix'; s.textContent = css; sr.appendChild(s); }
   inject();
   var st = document.createElement('style');
-  st.textContent = '[data-m]{min-height:44px;min-width:44px}#dcSub{max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:600px){#chat{scroll-padding-top:72px}}';
+  st.textContent = '[data-m]{min-height:44px;min-width:44px}#dcHead{background:linear-gradient(180deg,rgba(24,28,40,.72),rgba(14,16,24,.5))!important;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.1)}#dcSub{max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:600px){#chat{scroll-padding-top:72px}}';
   document.head.appendChild(st);
   var sub = document.getElementById('dcSub');
   if (sub) { var busy = 0; new MutationObserver(function () { if (busy) return; var t = sub.textContent; if (t.length > 26) { busy = 1; sub.textContent = t.slice(0, 24).trim() + '…'; busy = 0; } }).observe(sub, { childList: true, characterData: true, subtree: true }); }

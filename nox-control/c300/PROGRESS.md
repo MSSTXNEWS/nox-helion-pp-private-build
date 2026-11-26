@@ -33,3 +33,4 @@
 - WEB w_v2 (26.11): guard только «Transition was aborted»; Semantic Scholar через мост с честным статусом (429/HOLD)
 - WEB w_v3 (26.11): вау-проход: live.html получил оболочку мира (фон, стекло, шапка, док, ds) как system; tv 390 шапка не налезает
 - WEB w_v4 (26.11): live shell повтор (путь), sl-button 44 px (writer), диагностика перекрытий
+- WEB w_v6 (26.11): settings 390 заголовок под «Конструктором», studio чипы (.st-pre), live ts без undefined, chat-dc hero компактнее + стекло шапки
