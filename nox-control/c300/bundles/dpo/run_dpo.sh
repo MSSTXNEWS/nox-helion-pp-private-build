@@ -9,3 +9,5 @@ df -BG --output=avail $N | tail -1 | tr -dc 0-9 | { read g; [ "$g" -lt 15 ] && {
 ARG=""; [ "$1" = dry ] && ARG="--dry"
 echo "$(date -u +%T) build" >> $L; $PY -I $D/build_dpo.py --persona-gen ${PERSONA_GEN:-0} >> $L 2>&1
 echo "$(date -u +%T) train $ARG" >> $L; (cd $D && $PY -I train_dpo.py $ARG >> $L 2>&1); echo "rc=$?" >> $L; tail -3 $L
+# ворота на свежем кандидате (после полного прогона; для dry пропускаем)
+if [ -z "$ARG" ]; then C=$(ls -td $N/distill_v2/ckpt_keep/cand_dpo_* 2>/dev/null | head -1); [ -n "$C" ] && { echo "$(date -u +%T) gates $C" >> $L; (cd $D && $PY -I gates_only.py $C >> $L 2>&1); tail -3 $L; }; fi
