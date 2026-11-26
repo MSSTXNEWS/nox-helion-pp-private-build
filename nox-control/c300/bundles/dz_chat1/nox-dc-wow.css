@@ -54,3 +54,7 @@ html[data-nox-world=helion]::after{display:none}
 @media(pointer:coarse){.dc-b{height:44px!important}}
 @media(prefers-reduced-motion:reduce){.nxw-aurora i,.nxw-beam::after,#dcFill .nxw-sheen::after,#dcFill.nxw-load button{animation:none!important}.nxw-beam{display:none}}
 @media(max-width:700px){.nxw-aurora i:nth-child(3){display:none}.nxw-beam,#dcFill .nxw-sheen{display:none}}
+
+svg.nxw-hud{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}
+#nox-fastwow-host{position:relative;z-index:30}
+@media(max-width:700px){#nox-fastwow-host{display:none}}

@@ -56,5 +56,28 @@
   var n = 0; (function tick() { var ok = wire(); if (++n < 40) setTimeout(tick, ok ? 600 : 150); })();
   var mo = 0; try { mo = new MutationObserver(function () { var sr = dc.shadowRoot; if (sr) { reveal(sr); } }); dc.shadowRoot && mo.observe(dc.shadowRoot, { childList: true, subtree: true }); } catch (e) {}
   spot(document.body, '.nxw-spot');
+
+
+  /* общий wow-слой проекта грузим после load в простое: LCP не страдает */
+  function lazy() {
+    function css(h) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; document.head.appendChild(l); }
+    function js(s, mod, attr) { var e = document.createElement('script'); e.src = s; if (mod) e.type = 'module'; else e.defer = true; if (attr) e.setAttribute(attr, '1'); document.head.appendChild(e); }
+    css('./nox-wow-max.css'); js('./nox-wow-max.js', 0, 'data-nox-wow-max'); js('nox-fastwow/nox-fastwow.js', 0, 'data-nox-fastwow'); js('./nox-select-tiles.js'); js('./nox-fx.js', 1);
+  }
+  function whenIdle() { (window.requestIdleCallback || function (f) { setTimeout(f, 600); })(lazy, { timeout: 2500 }); }
+  if (document.readyState === 'complete') whenIdle(); else addEventListener('load', whenIdle, { once: true });
+  /* FASTWOW (index): общий фон nox-wow-max (Canvas2D частицы/свечение) вместо пепла nox-fx; док FASTWOW переносим наверх и красим в графит */
+  var FW = '.nfx-dock{bottom:auto!important;top:calc(60px + env(safe-area-inset-top,0px))!important;border-color:rgba(255,255,255,.14)!important;background:rgba(24,25,27,.72)!important;box-shadow:0 8px 25px #0006!important}.nfx-dock button,.nfx-panel button{min-height:44px;min-width:44px;background:rgba(255,255,255,.06)!important;color:#edeef0!important;border-color:rgba(255,255,255,.14)!important}.nfx-dock button:hover,.nfx-panel button:hover{background:rgba(255,255,255,.14)!important}.nfx-dock .primary{background:rgba(var(--gx-acc-rgb,157,177,209),.22)!important;border-color:rgba(var(--gx-acc-rgb,157,177,209),.6)!important}';
+  function fw() { var h = document.getElementById('nox-fastwow-host'), sr = h && h.shadowRoot; if (!sr) return false; if (!sr.getElementById('nxwfw')) { var s = document.createElement('style'); s.id = 'nxwfw'; s.textContent = FW; sr.appendChild(s); } return true; }
+  var fn = 0; (function t() { if (!fw() && ++fn < 40) setTimeout(t, 400); })();
+  var kn = 0; (function k() { var a = document.getElementById('nox-fx-ash'); try { if (a && window.tsParticles && tsParticles.items && tsParticles.items.length) { tsParticles.items.slice().forEach(function (c) { c.destroy(); }); a.remove(); return; } } catch (e) {} if (++kn < 30) setTimeout(k, 1000); })();
+  /* HUD Arwes (vendor/nox-fx/hud.js, createFrame): уголки на панелях, цвет графит */
+  if (!RM && !SM) setTimeout(function () {
+    var cards = document.querySelectorAll('#dcFill sl-card'); if (!cards.length) return;
+    cards.forEach(function (c) { if (c.querySelector('svg.nxw-hud')) return; var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'nxw-hud'); s.setAttribute('aria-hidden', 'true'); c.appendChild(s); });
+    import(new URL('./vendor/nox-fx/hud.js', location.href).href).then(function (m) {
+      m.hud('svg.nxw-hud'); document.querySelectorAll('svg.nxw-hud').forEach(function (s) { s.style.setProperty('--arwes-frames-line-color', 'rgba(var(--gx-acc-rgb,157,177,209),.55)'); });
+    }).catch(function () {});
+  }, 2500);
   window.NOXdcWow = { wire: wire };
 })();
