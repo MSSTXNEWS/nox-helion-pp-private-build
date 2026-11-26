@@ -1,0 +1,21 @@
+/* U-UX v1: общие правки удобства (шапка/док 44 px, статус-пилюля не перекрывает шапку, пустые состояния, загрузка, главный CTA). Только переменные Графита. */
+.tb-t,.tb-i{min-height:44px}
+.tb-i{min-width:44px}
+#k8-live{top:auto !important;bottom:calc(var(--ds-dock-h,48px) + 8px) !important;left:132px !important;transform:none !important;max-width:min(460px,40vw) !important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-height:44px !important;display:inline-flex !important;align-items:center;border:1px solid var(--gx-6,rgba(255,255,255,.15)) !important;border-radius:14px !important;z-index:40 !important;background:color-mix(in srgb,var(--gx-2,#111113) 88%,transparent) !important;color:var(--gx-11,#b0b4ba)}
+@media (max-width:768px){
+  body:not([data-page=creative]) #k8-live{display:none !important}
+  #k8-live{top:calc(var(--ds-head-h,56px) + 6px) !important;bottom:auto !important;left:14px !important;right:14px !important;max-width:none !important;width:auto}
+}
+/* информативное пустое состояние: подсказка действия вместо голого «пусто» */
+.ds-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 16px;text-align:center;color:var(--gx-11,#b0b4ba);border:1px dashed var(--gx-6,#43484e);border-radius:14px;background:color-mix(in srgb,var(--gx-3,#18191b) 60%,transparent)}
+.ds-empty b{color:var(--gx-12,#edeef0);font-size:16px}
+.ds-empty .ds-empty-cta{min-height:44px;padding:0 18px;border-radius:12px;background:var(--gx-12,#edeef0);color:var(--gx-1,#111113);font-weight:600;border:0;cursor:pointer}
+/* скелетон загрузки */
+.u-skel{display:block;border-radius:10px;min-height:16px;background:linear-gradient(100deg,var(--gx-3,#18191b) 30%,var(--gx-5,#2a2c30) 50%,var(--gx-3,#18191b) 70%);background-size:220% 100%;animation:u-skel 1.3s linear infinite}
+@keyframes u-skel{from{background-position:120% 0}to{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.u-skel{animation:none}}
+.tb-i,#tbFav,#tbBell,#tbNotes,#tbSearch{min-width:44px !important;min-height:44px !important}
+#dkToggle{min-width:44px !important;min-height:44px !important}
+/* кнопки .seg: градиентный текст nox-wow при background-image:none давал невидимые подписи (Опросить сейчас и др.) */
+html[data-nox-theme=graphite] :is(.seg>a,.seg>button,.seg>.more>button,.mnav .swiper-slide){-webkit-text-fill-color:currentColor !important;background-clip:border-box !important;-webkit-background-clip:border-box !important}
+#nxdock .nxd-cells{padding-right:52px}
