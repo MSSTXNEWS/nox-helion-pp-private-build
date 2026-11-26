@@ -1,0 +1,1 @@
+n=$1; for id in $(gh run list --workflow nox-c300.yml -L 8 --json databaseId -q .[].databaseId); do o=$(gh run view $id --log 2>&1); echo "$o" | grep -q "C300: $n$" && echo "$o" | sed -n "/C300: $n\$/,/Post Run/p" | cut -d' ' -f4- | cut -c30-300; done
