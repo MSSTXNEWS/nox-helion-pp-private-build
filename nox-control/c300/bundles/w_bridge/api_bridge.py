@@ -187,11 +187,23 @@ async def self_now(request):
 async def briefs(request):
     return web.json_response({'ok': True, 'ts': int(time.time()), 'morning': state_json('mind/morning_brief_v5.json', 'утренний бриф'), 'evening': state_json('mind/evening_brief_v5.json', 'вечерний бриф')})
 
+async def sci_semantic(request):
+    q = request.query.get('q', '').strip()[:200]
+    if not q: return web.json_response({'data': []})
+    try:
+        async with ClientSession(timeout=ClientTimeout(total=15)) as c:
+            async with c.get('https://api.semanticscholar.org/graph/v1/paper/search', params={'limit': '8', 'fields': 'title,year,authors,externalIds,url,venue', 'query': q}) as r:
+                if r.status != 200: return web.json_response(hold('Semantic Scholar: HTTP %s' % r.status, data=[]))
+                return web.json_response(await r.json())
+    except Exception as ex:
+        return web.json_response(hold('Semantic Scholar недоступен: %s' % str(ex)[:80], data=[]))
+
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
 app.router.add_get('/api/nox/training/status', training)
 app.router.add_get('/api/sci/arxiv', sci_arxiv)
+app.router.add_get('/api/sci/semantic', sci_semantic)
 app.router.add_get('/api/nox/self_now', self_now)
 app.router.add_get('/api/nox/briefs', briefs)
 app.router.add_route('*', '/api/settings', settings)
