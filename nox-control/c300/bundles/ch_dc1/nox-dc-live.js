@@ -16,8 +16,13 @@
     function upd() {
       fetch('/api/nox/self_now', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         if (!j || j.hold || !j.data) { t.textContent = 'нет данных (HOLD)'; return; }
-        var feel = pick(j.data, /^(feel|feeling|sense|now|state|mood|summary|text|ощущение)/i);
-        var why = pick(j.data, /(metric|reason|because|cause|evidence|причин|метрик)/i);
+        var d = j.data, feel = d.text || pick(d, /^(feel|feeling|sense|summary)/i), tl = d.telemetry || {}, why = [];
+        if (tl.gpu_temp != null) why.push('GPU ' + Math.round(tl.gpu_temp) + '°C');
+        if (tl.vram_pct != null) why.push('видеопамять ' + Math.round(tl.vram_pct) + '%');
+        if (tl.ram_used_pct != null) why.push('ОЗУ ' + Math.round(tl.ram_used_pct) + '%');
+        if (tl.silence_h != null) why.push('тишина ' + (Math.round(tl.silence_h * 10) / 10) + ' ч');
+        if (tl.train_running != null) why.push(tl.train_running ? 'идёт обучение' : 'обучение не идёт');
+        why = why.join(', ');
         if (!feel) { t.textContent = 'нет данных (HOLD)'; return; }
         if (!why) { t.textContent = 'ощущение без метрики-причины не показываю (HOLD)'; return; }
         t.textContent = ''; t.appendChild(el('div', '', String(feel).slice(0, 220)));
@@ -28,7 +33,7 @@
   }
 
   /* 2. Брифы: NOX пишет первым */
-  function briefText(d) { var t = pick(d, /^(text|brief|message|summary|body|content|markdown|reply)$/i); if (t) return String(t); var a = []; walk(d, function (k, v) { if (typeof v === 'string' && v.length > 20 && a.length < 6) a.push(v); }); return a.join('\n\n'); }
+  function briefText(d) { if (d && Array.isArray(d.lines) && d.lines.length) return d.lines.map(function (x) { return typeof x === 'string' ? '• ' + x : '• ' + (x.text || x.title || JSON.stringify(x)); }).join('\n'); var t = pick(d, /^(text|brief|message|summary|body|content|markdown|reply)$/i); if (t) return String(t); var a = []; walk(d, function (k, v) { if (typeof v === 'string' && v.length > 20 && a.length < 6) a.push(v); }); return a.join('\n\n'); }
   function toast(msg) { var a = document.createElement('sl-alert'); a.variant = 'primary'; a.closable = true; a.duration = 7000; a.innerHTML = '<sl-icon slot="icon" name="chat-dots"></sl-icon><strong>NOX пишет первым</strong><br>' + msg; if (a.toast) a.toast(); else document.body.appendChild(a); }
   function briefs() {
     var dc = $('deep-chat'); if (!dc || !dc.addMessage) return setTimeout(briefs, 1000);
@@ -46,7 +51,7 @@
 
   /* 3. Филлеры: ждём первый токен > 1,2 с, не в историю */
   var FILL = ['угу…', 'секунду…', 'так…', 'сейчас гляну…'], fi = 0;
-  var bar = el('div'); bar.setAttribute('aria-live', 'polite'); bar.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:rgba(20,24,34,.78);backdrop-filter:blur(10px);color:#fff;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50';
+  var bar = el('div'); bar.setAttribute('aria-live', 'polite'); bar.style.cssText = 'position:fixed;left:50%;top:76px;transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:rgba(20,24,34,.78);backdrop-filter:blur(10px);color:#fff;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50';
   function hide() { bar.style.opacity = '0'; }
   var of = window.fetch;
   window.fetch = function (u, o) {
