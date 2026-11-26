@@ -13,7 +13,10 @@ P = G.policy(); G._inference_mode(m, log); gen = G.Gen(m, tok, im_id, fmt, P, lo
 cases = EC.ext_cases(); sysm = [{"role": "system", "content": persona}]; out = {}
 for d in dirs:
     G.load_adapter(m, d); gen.reset()
-    def fid(chat): return {c["id"]: chat(sysm + [{"role": "user", "content": c["prompt"]}]) for c in cases}
+    def _one(chat, c):
+        try: return chat(sysm + [{"role": "user", "content": c["prompt"]}])
+        except Exception: return ""  # G.Pending и прочее: пустой ответ, не падаем
+    def fid(chat): return {c["id"]: _one(chat, c) for c in cases}
     ans = G.drive(fid, gen, time.time() + 3600)
     rep = FT.score(cases, ans); out[os.path.basename(d)] = {"score": rep["score"], "by_cat": rep["by_cat"], "n": rep["n"]}
     log("ext %s: %s %s" % (os.path.basename(d), rep["score"], rep["by_cat"]))
