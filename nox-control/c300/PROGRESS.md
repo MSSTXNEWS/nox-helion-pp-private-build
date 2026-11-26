@@ -10,3 +10,4 @@
 | 26.11 | studio.html = конструктор FASTWOW (плитки 5 миров x 6 палитр, 0 select), старая studio-legacy.html; шрифты Tektur/Orbitron скопированы, 404 нет | site | 1440 и 390 отрисованы, 0 JS-ошибок |
 | 26.11 | zip в v29src удалены; диск /workspace 17 ГБ свободно | server | df |
 | 26.11 | Чат v4: подписи и прогресс в колонке «Система», воздух, фон; оверлей миров на чате отключён (ломал цвет и перекрывал) | chat-dc, nox-dc.css, nox-dc-cols.js | WOW на глаз ~6, замер vision не запускал |
+| 26.11 | Чат v5: hero-приветствие (плитки быстрых запросов), типографика, шапка/кнопки 40 px (ch_dc30) | chat-dc, nox-dc.js/css | Lighthouse (desktop, нагруженный сервер): perf 36, a11y 100, BP 96; vision 1920: A8 R7 WOW6 (правая панель перегружена); axe: label critical x1, region x2 |
