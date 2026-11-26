@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru" class="sl-theme-dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#111113">
+<title>Резонанс · NOX</title>
+<link rel="icon" href="favicon.svg">
+<script src="./nox-theme.js"></script>
+<link rel="stylesheet" href="./nox-dc.css?v=dc1">
+</head>
+<body data-page="wow-chat" class="dc">
+<header class="dc-head" id="dcHead">
+  <a class="dc-brand" href="./index.html" aria-label="На главную NOX"><span class="dc-dot"></span><b>Резонанс</b></a>
+  <span class="dc-sub" id="dcSub">диалог</span>
+  <span class="dc-sp"></span>
+  <button class="dc-b" id="dcNew" type="button" title="Новый диалог">Новый</button>
+  <button class="dc-b" id="dcThreads" type="button" title="История диалогов">История</button>
+  <button class="dc-b" id="dcPad" type="button" title="Блокнот">Блокнот</button>
+  <a class="dc-b dc-lg" href="?legacy=1" title="Прежний интерфейс чата">Классика</a>
+</header>
+<div class="dc-toast" id="dcToast" role="status" aria-live="polite" hidden></div>
+<aside class="dc-thr" id="dcThr" hidden><div class="dc-thr-in" id="dcThrIn"></div></aside>
+<main class="dc-main"><deep-chat id="chat"></deep-chat></main>
+<script src="./vendor/deep-chat/deep-chat.iife.js"></script>
+<script src="./nox-k8-meta.js"></script>
+<script src="./nox-u-pad.js?v=p8" defer></script>
+<script src="./nox-dc.js?v=dc1"></script>
+</body>
+</html>
