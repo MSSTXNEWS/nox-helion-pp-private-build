@@ -19,7 +19,7 @@ function mount(){
     var html='',txt=[];nodes.forEach(function(n){var im=n.querySelector&&n.querySelector('img');var tx=(n.firstChild&&n.firstChild.nodeType===3?n.firstChild.textContent:n.textContent)||'';if(tx.trim()&&tx.trim()!=='…')html+='<div>'+esc(tx)+'</div>';if(im)html+='<img src="'+esc(im.src)+'" alt="Сгенерированная картинка" style="max-width:100%;border-radius:10px;margin-top:6px;cursor:pointer" data-nxp="1">'});
     if(!html){var last=log.lastElementChild;html='<div>'+esc((last&&last.textContent)||'NOX не ответил')+'</div>'}
     signals.onResponse({html:html})}},400)}};
- dc.addEventListener('click',function(e){});
+ var n=0,iv=setInterval(function(){var r=dc.shadowRoot;if(r){r.querySelectorAll('.input-button:not([aria-label])').forEach(function(b){b.setAttribute('aria-label','Отправить')});r.querySelectorAll('[role=button]:not([aria-label])').forEach(function(b){b.setAttribute('aria-label','Отправить')})}if(++n>40)clearInterval(iv)},500);
  dc.requestBodyLimits={maxMessages:1};
  var autoload=function(){};
 }
