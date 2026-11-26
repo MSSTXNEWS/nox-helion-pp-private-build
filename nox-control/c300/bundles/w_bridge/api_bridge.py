@@ -173,11 +173,27 @@ async def sci_arxiv(request):
     except Exception as ex:
         return web.json_response(hold('arXiv недоступен: %s' % str(ex)[:80], items=[]))
 
+def state_json(rel, what):
+    path = N + '/state/' + rel
+    d = rj(path)
+    if d is None: return hold('%s: нет данных (state/%s отсутствует)' % (what, rel))
+    try: mt = int(os.path.getmtime(path))
+    except Exception: mt = 0
+    return {'ok': True, 'ts': int(time.time()), 'mtime': mt, 'source': 'state/' + rel, 'data': d}
+
+async def self_now(request):
+    return web.json_response(state_json('core/self_now.json', 'Я сейчас'))
+
+async def briefs(request):
+    return web.json_response({'ok': True, 'ts': int(time.time()), 'morning': state_json('mind/morning_brief_v5.json', 'утренний бриф'), 'evening': state_json('mind/evening_brief_v5.json', 'вечерний бриф')})
+
 app = web.Application()
 for p, h in (('/api/training/status', training), ('/api/nox/activity', activity), ('/api/notifications', notifications), ('/api/nox/status', status)):
     app.router.add_get(p, h)
 app.router.add_get('/api/nox/training/status', training)
 app.router.add_get('/api/sci/arxiv', sci_arxiv)
+app.router.add_get('/api/nox/self_now', self_now)
+app.router.add_get('/api/nox/briefs', briefs)
 app.router.add_route('*', '/api/settings', settings)
 if __name__ == '__main__':
     web.run_app(app, host='127.0.0.1', port=PORT, print=None)
