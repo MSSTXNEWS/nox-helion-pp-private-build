@@ -3,8 +3,7 @@
 (function () {
   'use strict';
   if (/[?&]draw=0/.test(location.search)) return;
-  var dc = document.querySelector('deep-chat'); if (!dc || !dc.connect || !dc.connect.handler) return;
-  var oh = dc.connect.handler;
+  var dc = document.querySelector('deep-chat'); if (!dc) return;
   var RX = /^\s*(?:\/(?:img|draw|рис\w*)\s+|(?:нарисуй(?:те)?|изобрази(?:те)?|сгенерируй(?:те)?\s+(?:картинку|изображение|рисунок|фото)|создай(?:те)?\s+(?:картинку|изображение|рисунок))\s*[:,—-]?\s*)(.+)$/is;
   var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   function improve(p) {
@@ -13,7 +12,7 @@
       .then(function (r) { var rd = r.body.getReader(), dec = new TextDecoder(), buf = '';
         function pump() { return rd.read().then(function (x) { if (x.done) return acc; buf += dec.decode(x.value, { stream: true }); var k; while ((k = buf.indexOf('\n')) >= 0) { var l = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (!l) continue; try { var d = JSON.parse(l); var t = d.text || (d.message && d.message.content); if (t) acc += t; } catch (e) {} } return pump(); }); }
         return pump(); })
-      .then(function (a) { a = (a || '').replace(/^["«\s]+|["»\s]+$/g, '').split('\n')[0].trim(); return a.length > 8 && a.length < 800 ? a : p; })
+      .then(function (a) { a = (a || '').replace(/^["«\s]+|["»\s]+$/g, '').split('\n')[0].trim(); return a.length > 15 && a.length < 600 && (a.replace(/[^\x00-\x7F]/g, '').length / a.length) > 0.9 ? a : p; })
       .catch(function () { return p; });
   }
   function gen(p, size) {
@@ -31,9 +30,9 @@
       '<button type="button" data-nxg="var" data-p="' + esc(prompt) + '" style="' + BS + '">Вариации</button>' +
       '<button type="button" data-nxg="ed" data-url="' + esc(url) + '" style="' + BS + '">В фото-редактор</button></div></div>';
   }
-  dc.connect = Object.assign({}, dc.connect, { handler: function (body, signals) {
+  window.NOXdcDraw = function (body, signals) {
     var msgs = body && body.messages || [], last = msgs[msgs.length - 1], text = last && (last.text || last.content) || '';
-    var m = RX.exec(text); if (!m || (body && body.files && body.files.length)) return oh(body, signals);
+    var m = RX.exec(text); if (!m || (body && body.files && body.files.length)) return false;
     var prompt = m[1].trim(), T = window.NOXdc && NOXdc.cur && NOXdc.cur();
     if (T) { T.msgs.push({ role: 'user', content: text, ts: Date.now() }); if (T.title === 'Новый диалог') T.title = text.replace(/\s+/g, ' ').slice(0, 44); }
     signals.onOpen();
@@ -49,7 +48,8 @@
         signals.onResponse({ text: msg }); if (T) { T.msgs.push({ role: 'assistant', content: msg, ts: Date.now() }); NOXdc.save(); }
       })
       .then(function () { signals.onClose(); });
-  } });
+    return true;
+  };
   function down() { var r = dc.shadowRoot, m = r && r.querySelector('#messages'); if (m) m.scrollTop = m.scrollHeight; var l = r && r.querySelectorAll('.nxg img'); if (l && l.length && !l[l.length - 1].complete) l[l.length - 1].addEventListener('load', down, { once: true }); }
   function bind() {
     var r = dc.shadowRoot; if (!r) return setTimeout(bind, 400);

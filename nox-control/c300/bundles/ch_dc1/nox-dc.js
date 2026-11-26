@@ -89,6 +89,7 @@ function regen(){
 dc.connect={stream:true,handler:function(body,signals){
  var msgs=body&&body.messages||[];var last=msgs[msgs.length-1];var text=last&&(last.text||last.content)||'';
  var files=(body&&body.files)||[];
+ if(window.NOXdcDraw&&NOXdcDraw(body,signals))return;
  if(!text&&!files.length){signals.onResponse({error:'Пустое сообщение'});return}
  if(!text)text='(вложение)';
  var rq=replyTo;if(rq){text='↩ «'+rq+'»\n'+text;setReply(null)}
