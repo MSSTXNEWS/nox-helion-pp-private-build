@@ -17,7 +17,7 @@ def own(pgs):
     from playwright.sync_api import sync_playwright
     res={}
     with sync_playwright() as p:
-        b=p.chromium.launch()
+        b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader'])
         for pg in pgs:
             for vp,(w,h,mob) in VPS.items():
                 c=b.new_context(viewport={'width':w,'height':h},is_mobile=mob,has_touch=mob); x=c.new_page(); errs=[]; bad=[]

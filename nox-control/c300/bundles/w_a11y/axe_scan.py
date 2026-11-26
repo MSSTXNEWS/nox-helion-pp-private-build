@@ -2,7 +2,7 @@ import sys,json
 from playwright.sync_api import sync_playwright
 A=open('/workspace/nox/tools/uiscore/node_modules/axe-core/axe.min.js').read()
 with sync_playwright() as p:
-    b=p.chromium.launch()
+    b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader'])
     for n in sys.argv[1:]:
       for w in (390,1440):
         pg=b.new_page(viewport={'width':w,'height':900})
