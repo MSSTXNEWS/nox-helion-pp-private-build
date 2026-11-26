@@ -1,4 +1,5 @@
-#!/bin/bash
-pgrep -f ops/p3_persona_gen.py >/dev/null && { echo already running; exit 0; }
-setsid -f nice -n 10 /workspace/nox/venv/bin/python -I /workspace/nox/ops/p3_persona_gen.py 900 > /workspace/nox/state/p3/persona_gen.out 2>&1 < /dev/null
-sleep 60; cat /workspace/nox/state/p3/persona_gen.out | tail -3; cat /workspace/nox/state/p3/persona_gen.json 2>/dev/null; ls /workspace/nox/distill_v2/raw_skill_p3_persona_* 2>/dev/null
+echo "C300: srv_p5"
+sleep 240; date -u +%T
+grep -a "chain2\|rc=\|Traceback\|Error\|ПРИНЯТ\|gates\|train" /workspace/nox/ops/dpo/run.log | grep -v "pytree\|Tokeniz\|Dropping" | tail -n 8 | cut -c1-260
+tail -c 600 /workspace/nox/ops/dpo/run.log | tr '\r' '\n' | tail -n 2 | cut -c1-200
+ls /workspace/nox/STOP 2>&1 | head -1
