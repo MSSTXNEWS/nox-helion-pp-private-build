@@ -32,3 +32,6 @@ html[data-nox-theme=graphite] :is(.seg>a,.seg>button,.seg>.more>button,.mnav .sw
 @media (prefers-reduced-motion:reduce){.u-cta{animation:none}}
 
 .u-sec:not(.u-cta){background:transparent !important;color:var(--gx-12,#edeef0) !important;-webkit-text-fill-color:var(--gx-12,#edeef0) !important;border:1px solid var(--gx-7,#43484e) !important;box-shadow:none !important}
+
+sl-button.u-cta::part(base){background:var(--gx-12,#edeef0);color:var(--gx-1,#111113);border:0;font-weight:700;min-height:44px}
+sl-button.u-sec:not(.u-cta)::part(base){background:transparent;color:var(--gx-12,#edeef0);border:1px solid var(--gx-7,#43484e)}
