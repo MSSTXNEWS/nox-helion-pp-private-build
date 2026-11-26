@@ -9,7 +9,7 @@ import torch
 import distill_v2 as dv
 import liska_gates as G
 cand = sys.argv[1]; base = sys.argv[2] if len(sys.argv) > 2 else "/workspace/nox/distill_v2/ckpt_keep/best_step_0075_hold1.1159_11231724"
-MODEL = "/workspace/nox/models/student/Qwen/Qwen3.6-35B-A3B"
+MODEL = os.environ.get("NOX_MODEL", "/workspace/nox/models/student/Qwen/Qwen3.6-35B-A3B")
 log = lambda s: print(time.strftime("%T"), s, flush=True)
 persona = dv.NOX_PERSONA
 try:
