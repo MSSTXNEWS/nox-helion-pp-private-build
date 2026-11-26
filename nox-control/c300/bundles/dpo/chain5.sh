@@ -9,6 +9,7 @@ for i in $(seq 1500); do
 done
 echo "$(date -u +%T) chain5: окно. df: $(df -h /workspace | tail -1)" >> $L
 dump(){ # dir name maxtok
+  [ -d "$1" ] || return
   (cd $D && $PY -I teacher_dump.py $1 $2 $3 >> $L 2>&1); rc=$?; echo "$(date -u +%T) dump $2 rc=$rc" >> $L
   if [ $rc = 0 ] && [ -s $N/ops/teacher_answers/$2.jsonl ]; then
     if lsof +D "$1" >/dev/null 2>&1 || grep -q "$(basename $1)" $N/serve/llama-swap.yaml $N/state/orch_registry.json 2>/dev/null; then echo "SKIP удаления $1: используется" >> $L
