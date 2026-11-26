@@ -38,7 +38,7 @@ def own(pgs):
         b.close()
 def lh_one(job):
     pg,vp=job; w,h,mob=VPS[vp]
-    cp=glob.glob(os.environ.get('PLAYWRIGHT_BROWSERS_PATH','/workspace/nox/tools/ms-playwright')+'/chromium*/chrome-linux*/*headless_shell')+glob.glob(os.environ.get('PLAYWRIGHT_BROWSERS_PATH','/workspace/nox/tools/ms-playwright')+'/chromium-*/chrome-linux*/chrome')
+    cp=glob.glob('/workspace/nox/tools/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell')
     out=f'{OUT}/{pg}_{vp}_lh.json'
     cmd=[LH,url(pg,vp),'--only-categories=accessibility,best-practices,performance','--output=json','--output-path='+out,'--quiet','--chrome-flags=--headless --no-sandbox --disable-gpu','--form-factor='+('mobile' if mob else 'desktop')]
     if not mob: cmd+=['--screenEmulation.mobile=false','--screenEmulation.width=1440','--screenEmulation.height=900','--screenEmulation.deviceScaleFactor=1']
