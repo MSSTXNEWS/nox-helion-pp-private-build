@@ -11,7 +11,7 @@ with sync_playwright() as p:
         c.add_init_script("localStorage.setItem('nox.cinematic.world.v3','%s')"%wd)
         x=c.new_page(); errs=[]; x.on('pageerror',lambda e:errs.append(str(e)[:90]))
         try:
-            x.goto('http://127.0.0.1:8091/web/%s.html'%pg,wait_until='domcontentloaded',timeout=25000); x.wait_for_timeout(5000)
+            x.goto('http://127.0.0.1:8091/web/%s.html'%pg,wait_until='domcontentloaded',timeout=60000); x.wait_for_timeout(3500)
             info=x.evaluate("()=>({th:document.documentElement.getAttribute('data-nox-theme'),sel:[...document.querySelectorAll('select')].filter(e=>e.offsetWidth).length,w:!!window.NOX_CINEMATIC_WORLDS,hs:document.documentElement.scrollWidth>innerWidth+1,small:[...document.querySelectorAll('button,a,[role=button]')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&r.bottom>0&&r.top<innerHeight&&(r.height<40||r.width<40)}).length})")
             im=Image.open(io.BytesIO(x.screenshot(type='png'))).convert('RGB')
         except Exception as e: info=str(e)[:80]; im=Image.new('RGB',(W,H),(60,0,0))
