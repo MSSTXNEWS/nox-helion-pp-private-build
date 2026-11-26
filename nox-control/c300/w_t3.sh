@@ -16,4 +16,5 @@ if 'nox-dc-live.js' not in c:
     open(S+'chat-dc.html.bak_w_t3','w').write(c); open(S+'chat-dc.html','w').write(c.replace(k,'<script src="./nox-dc-live.js?v=l1" defer></script>\n'+k,1)); print('chat patched')
 P
 bash <(curl -fsSL "$R/th_graphite/ensure.sh?cb=$(date +%s)") 2>&1 | tail -1; bash <(curl -fsSL "$R/th_graphite/webroot_sync.sh?cb=$(date +%s)") | tail -1
-sleep 3; curl -s http://127.0.0.1:8796/api/nox/self_now | head -c 200; echo; curl -s http://127.0.0.1:8796/api/nox/briefs | head -c 300; echo
+sleep 3
+for u in self_now briefs; do curl -s http://127.0.0.1:8796/api/nox/$u | python3 -c "import sys,json;d=json.load(sys.stdin);print('$u ok',d.get('ok'),'hold',d.get('hold'),sorted(k for k in d if k!='data')[:6])"; done
