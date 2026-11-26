@@ -59,6 +59,23 @@ def backup():
     os.replace(tmp, out)
     r = restore_test(out); rec = {"ts": now().isoformat(), "slot": slot, "bytes": os.path.getsize(out), "files": len(files), "restore_ok": r}
     jw(C + "/soul_hourly_ok.json", rec); return rec
+SOUL_CFG = [S + "/passport.json", S + "/genesis_chain.jsonl", S + "/genesis_ledger.json", N + "/agents/passport_prompt.json", M + "/control_vectors.json",
+            C + "/sensorium.json", C + "/stages.json", C + "/autonomy_matrix.json", C + "/canon.py"]
+def drive_sync():
+    """Копия только конфигов души (без личной памяти: dream/lessons/unknown_map/разговоры) на gdrive:NOX/backup/soul/, 24 слота, sha256 проверка скачиванием. Без age-ключа: не шифруется."""
+    slot = "soul_cfg_h%02d.tgz" % now().hour; out = C + "/soul/" + slot; files = [p for p in SOUL_CFG if os.path.exists(p)]
+    with tarfile.open(out, "w:gz") as tf:
+        for p in files: tf.add(p, arcname=p.lstrip("/"))
+    loc = sha(out); rec = {"ts": now().isoformat(), "slot": slot, "files": len(files), "bytes": os.path.getsize(out), "uploaded": False, "sha256_ok": False, "encrypted": bool(shutil.which("age"))}
+    if not shutil.which("rclone"): rec["err"] = "no rclone"
+    elif subprocess.run("timeout 60 rclone lsd gdrive:", shell=True, capture_output=True).returncode != 0: rec["err"] = "gdrive unreachable"
+    else:
+        r = subprocess.run("timeout 120 rclone copyto %s gdrive:NOX/backup/soul/%s" % (out, slot), shell=True, capture_output=True)
+        rec["uploaded"] = r.returncode == 0
+        if rec["uploaded"]:
+            h = hashlib.sha256(subprocess.run("timeout 120 rclone cat gdrive:NOX/backup/soul/%s" % slot, shell=True, capture_output=True).stdout).hexdigest()
+            rec["sha256_ok"] = (h == loc)
+    jw(C + "/drive_sync.json", rec); return rec
 def restore_test(tgz):
     d = tempfile.mkdtemp(); ok = True
     try:
@@ -220,7 +237,7 @@ def daemon():
         try:
             disk()
             if n.minute % 30 == 0 and done.get("hg") != n.strftime("%H%M%d"): hunger(); unknown_from_dreams(); done["hg"] = n.strftime("%H%M%d")
-            if done.get("bk") != n.strftime("%Y%m%d%H"): backup(); done["bk"] = n.strftime("%Y%m%d%H"); selfnow()
+            if done.get("bk") != n.strftime("%Y%m%d%H"): backup(); drive_sync(); done["bk"] = n.strftime("%Y%m%d%H"); selfnow()
             if n.hour == 8 and n.minute < 10 and k("m") not in done: morning(); done[k("m")] = 1
             if n.hour == 22 and 30 <= n.minute < 40 and k("e") not in done: evening(); done[k("e")] = 1
             if n.weekday() == 6 and n.hour == 3 and k("x") not in done: exam(); done[k("x")] = 1
@@ -228,7 +245,7 @@ def daemon():
         time.sleep(60)
 if __name__ == "__main__":
     os.makedirs(C, exist_ok=True); c = sys.argv[1] if len(sys.argv) > 1 else "help"
-    f = {"disk": disk, "backup": backup, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
+    f = {"disk": disk, "backup": backup, "drive": drive_sync, "passport": passport_init, "birth": birth, "selfnow": selfnow, "morning": morning, "evening": evening, "exam": exam,
          "daemon": daemon, "feelings": lambda: feelings(), "hunger": hunger, "unknown": unknown_from_dreams, "static": static_init, "verify": chain_verify}.get(c)
     r = f() if f else "cmds: disk backup passport birth selfnow morning evening exam daemon feelings verify"
     print(json.dumps(r, ensure_ascii=False, indent=1) if not isinstance(r, str) else r)
