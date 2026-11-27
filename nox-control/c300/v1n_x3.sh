@@ -3,9 +3,9 @@ R=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/${REF:
 S=/workspace/nox/web/site; D=$S/v1n; [ -d $D ] && cp -a $D /workspace/nox/state/web_bak_v1n_$cb
 W=/tmp/v1n_$cb; mkdir -p $W/fonts; ok=0
 for k in 1 2 3 4 5 6; do fail=0
- for f in ab.css ab.js chunk-AL54HLTZ.js chunk-B5WNXPIZ.js chunk-FKLRMSES.js chunk-QU4AGKI7.js chunk-VDN5A6MS.js fonts/inter-cyrillic-wght-normal.woff2 fonts/inter-latin-wght-normal.woff2 fonts/jetbrains-mono-cyrillic-wght-normal.woff2 fonts/jetbrains-mono-latin-wght-normal.woff2 index.html ; do curl -fsSL "$R/$f?cb=$cb$k" -o $W/$f || fail=1; done
+ for f in ab.css ab.js chunk-AL54HLTZ.js chunk-B5WNXPIZ.js chunk-FKLRMSES.js chunk-QU4AGKI7.js chunk-VDN5A6MS.js fonts/inter-cyrillic-wght-normal.woff2 fonts/inter-latin-wght-normal.woff2 fonts/jetbrains-mono-cyrillic-wght-normal.woff2 fonts/jetbrains-mono-latin-wght-normal.woff2 index.html ; do curl -fsSL "$R/$f?cb=$cb$k" -o $W/$f || { fail=1; echo "dlfail $f"; }; done
  [ $fail = 0 ] && [ "$(sha256sum $W/ab.js | cut -c1-16)" = 0ffb9658e723c418 ] && { ok=1; break; }; sleep 5; done
-[ $ok = 1 ] || { echo STALE; exit 0; }
+[ $ok = 1 ] || { echo "STALE sha=$(sha256sum $W/ab.js | cut -c1-16)"; exit 0; }
 rm -rf $D; mkdir -p $D; cp -r $W/* $D/; cp -a $S/chat-dc.html /workspace/nox/state/web_bak_chatdc_x3_$cb.html; cp $W/chat-dc.html $S/chat-dc.html; echo "installed files=$(find $D -type f | wc -l)"
 bash <(curl -fsSL "$R/../th_graphite/webroot_sync.sh?cb=$cb") 2>/dev/null | tail -1
 for u in chat.html v1n/index.html v1n/ab.js v1n/ab.css v1n/fonts/inter-cyrillic-wght-normal.woff2 chat-dc.html; do echo "$u $(curl -s -o /dev/null -w '%{http_code} %{size_download}' http://127.0.0.1:18091/web/$u)"; done
