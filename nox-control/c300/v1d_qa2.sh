@@ -45,4 +45,4 @@ with sync_playwright() as p:
     print('draft',pg.evaluate("(()=>{const e=[...document.querySelectorAll('kbd')].find(k=>k.textContent==='Tab');return e?e.parentElement.innerText.slice(0,100):'(пусто)'})()"))
     print('mem reqs',reqs[-6:],'errs',errs[:4]);b.close()
 P
-python3 /tmp/v1dqa2.py 2>&1 | tail -25
+timeout 420 $N/venv/bin/python /tmp/v1dqa2.py 2>&1 | tail -25
