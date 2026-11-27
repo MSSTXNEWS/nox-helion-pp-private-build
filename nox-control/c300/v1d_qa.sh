@@ -33,7 +33,9 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1500)
         print('img',pg.evaluate("(()=>{const i=document.querySelector('figure img');return [i.complete,i.naturalWidth,i.naturalHeight,i.src.slice(-60)]})()"))
     else:
-        print(pg.evaluate("document.body.innerText.slice(-300)"))
+        print(pg.evaluate("(()=>{const e=[...document.querySelectorAll('.nox-body')].pop();return e?e.innerText.slice(0,200):'NONE'})()"))
     print('errs',errs[:5]);b.close()
 P
+echo "--- direct turn"; t0=$(date +%s); curl -sN -m 60 -X POST http://127.0.0.1:18091/api/turn -H 'Content-Type: application/json' -d '{"conversation_id":"dzq3","message":"Привет","mode":"auto","length":"normal","source":"full"}' | cut -c1-160 | head -6; echo "turn $(( $(date +%s)-t0 ))s"
+echo "--- direct img"; t0=$(date +%s); curl -s -m 100 -w ' code=%{http_code}' -X POST http://127.0.0.1:18091/img/generate -H 'Content-Type: application/json' -d '{"prompt":"red circle on white background","width":512,"height":512}' | cut -c1-300; echo " img $(( $(date +%s)-t0 ))s"
 timeout 280 $N/venv/bin/python /tmp/v1dqa.py 2>&1 | cut -c1-400
