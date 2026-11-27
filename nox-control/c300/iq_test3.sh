@@ -42,3 +42,5 @@ for i,(q,c) in enumerate(T,1):
     if isinstance(s,(int,float)): tot+=s;n+=1
 print("AVG",round(tot/max(n,1),1),"of",n)
 PY
+echo "judge_log_lines=$(wc -l < /workspace/nox/state/chat_judge.log 2>/dev/null) adv_log_lines=$(wc -l < /workspace/nox/state/chat_advisors.log 2>/dev/null)"
+tail -n 30 /workspace/nox/state/chat_judge.log 2>/dev/null | grep -oE '"(score|verdict|ok|status|code)": *[^,}]{1,12}' | sort | uniq -c | head
