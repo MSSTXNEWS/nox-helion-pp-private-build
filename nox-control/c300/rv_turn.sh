@@ -1,4 +1,4 @@
-echo "C300: rv_turn"
+echo "K1: rv_turn"
 # РЕВИЗОР: только числа и коды, без текста ответов. Не печатает секреты.
 python3 - <<'PY'
 import json,time,urllib.request,uuid,os
