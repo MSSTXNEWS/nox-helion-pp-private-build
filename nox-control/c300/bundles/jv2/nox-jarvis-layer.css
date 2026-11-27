@@ -1,0 +1,37 @@
+/* NOX · слой JARVIS поверх Графита (раскатка на HOME/SYSTEM/TRAINING/MODELS/MEMORY). Включается nox-jarvis-layer.js; откат ?jarvis=0 (запоминается), вернуть ?jarvis=1. Только html.jv-on. */
+html.jv-on{--gx-acc:#00d6ff;--gx-acc-rgb:0,214,255;--gx-acc-hi:#7fe9ff;--jv-c:0,214,255;--jv-c2:90,160,255;--jv-tx:#d6f6ff;--jv-mu:#6fa3b8;--jv-bad:255,80,80;--jv-line:linear-gradient(135deg,rgba(0,214,255,.9),rgba(0,214,255,.25) 50%,rgba(90,160,255,.7))}
+html.jv-on body:not([data-page=index]){background:radial-gradient(1200px 700px at 50% 20%,#06263a 0,#031018 55%,#010508 100%) fixed!important}
+html.jv-on .jv-gridbg{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;background:linear-gradient(rgba(var(--jv-c),.05) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,rgba(var(--jv-c),.05) 1px,transparent 1px) 0 0/48px 48px;mask-image:radial-gradient(ellipse at 50% 40%,#000 15%,transparent 78%);-webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 15%,transparent 78%)}
+html.jv-on .jv-scanbg{position:fixed;left:0;right:0;height:140px;top:-140px;pointer-events:none;z-index:0;background:linear-gradient(transparent,rgba(var(--jv-c),.06),transparent);animation:jvl-scan 8s linear infinite}
+@keyframes jvl-scan{to{transform:translateY(calc(100vh + 280px))}}
+/* карточки страниц: срезанные углы + уголки */
+html.jv-on .page .card,html.jv-on .page section.card{--p:12px;border:0!important;border-radius:0!important;background-color:rgba(3,20,30,.88)!important;
+ clip-path:polygon(var(--p) 0,calc(100% - var(--p)) 0,100% var(--p),100% calc(100% - var(--p)),calc(100% - var(--p)) 100%,var(--p) 100%,0 calc(100% - var(--p)),0 var(--p));
+ box-shadow:inset 0 0 0 1px rgba(var(--jv-c),.38),0 0 18px rgba(var(--jv-c),.12)!important;
+ background-image:linear-gradient(rgb(var(--jv-c)),rgb(var(--jv-c))),linear-gradient(rgb(var(--jv-c)),rgb(var(--jv-c))),linear-gradient(rgb(var(--jv-c)),rgb(var(--jv-c))),linear-gradient(rgb(var(--jv-c)),rgb(var(--jv-c)))!important;
+ background-size:22px 2px,2px 22px,22px 2px,2px 22px!important;background-position:var(--p) 0,100% var(--p),calc(100% - var(--p)) 100%,0 calc(100% - var(--p))!important;background-repeat:no-repeat!important}
+html.jv-on .page .card>h2,html.jv-on .page h2{font:600 12px/1.2 "Tektur",ui-monospace,monospace!important;letter-spacing:.18em!important;text-transform:uppercase;color:rgb(var(--jv-c))!important;text-shadow:0 0 10px rgba(var(--jv-c),.5)}
+html.jv-on .page h1{font-family:"Tektur",Orbitron,sans-serif!important;letter-spacing:.16em;text-shadow:0 0 16px rgba(var(--jv-c),.6)}
+html.jv-on .page .kick{color:rgb(var(--jv-c))!important;letter-spacing:.2em}
+html.jv-on .page .seg button,html.jv-on .page .seg a{border-radius:0!important;border-color:rgba(var(--jv-c),.45)!important;background:rgba(var(--jv-c),.08)!important;color:var(--jv-tx)!important;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+html.jv-on .page .seg button:hover{background:rgba(var(--jv-c),.2)!important;box-shadow:0 0 14px rgba(var(--jv-c),.35)}
+html.jv-on .page .tag,html.jv-on .page .mono{color:var(--jv-tx)}
+html.jv-on .page input,html.jv-on .page textarea{border-radius:0!important;border-color:rgba(var(--jv-c),.4)!important;background:rgba(var(--jv-c),.06)!important}
+/* HUD-ряд */
+.jv-hudrow{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin:0 0 14px}
+.jv-f{position:relative;--p:12px;background:var(--jv-line);clip-path:polygon(var(--p) 0,calc(100% - var(--p)) 0,100% var(--p),100% calc(100% - var(--p)),calc(100% - var(--p)) 100%,var(--p) 100%,0 calc(100% - var(--p)),0 var(--p));filter:drop-shadow(0 0 6px rgba(var(--jv-c),.3))}
+.jv-f::before{content:"";position:absolute;inset:1px;background:linear-gradient(180deg,rgba(3,22,32,.95),rgba(2,12,18,.97));clip-path:polygon(calc(var(--p) - .6px) 0,calc(100% - var(--p) + .6px) 0,100% calc(var(--p) - .6px),100% calc(100% - var(--p) + .6px),calc(100% - var(--p) + .6px) 100%,calc(var(--p) - .6px) 100%,0 calc(100% - var(--p) + .6px),0 calc(var(--p) - .6px))}
+.jv-f>*{position:relative}
+.jv-h{display:flex;align-items:center;gap:8px;padding:8px 14px 2px;font:600 11px/1 "Tektur",ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:rgb(var(--jv-c))}
+.jv-h i{flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--jv-c),.6),transparent)}.jv-h em{font-style:normal;color:var(--jv-mu);letter-spacing:.1em}
+.jv-g5{display:grid;grid-template-columns:repeat(5,1fr);padding:0 6px 8px;align-content:center;min-height:130px}.jv-g5>div{height:104px}
+.jv-chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:6px 12px 12px}
+.jv-chip{padding:7px 10px;min-height:44px;background:rgba(var(--jv-c),.06);border:1px solid rgba(var(--jv-c),.2);display:flex;flex-direction:column;justify-content:center;gap:3px}
+.jv-chip small{font:600 9px/1 ui-monospace,monospace;letter-spacing:.14em;color:var(--jv-mu);text-transform:uppercase}.jv-chip b{font:600 15px/1.1 "Tektur",sans-serif;color:#fff;word-break:break-word}.jv-chip.hold b{color:var(--jv-mu);font-size:13px}
+.jv-demo{color:#ffaa3c!important}
+/* HOME: плавающая панель, закрыта на узких */
+#jvFloat{position:fixed;left:12px;bottom:84px;z-index:60;width:min(340px,calc(100vw - 24px))}
+#jvFloat .jv-g5{grid-template-columns:repeat(3,1fr)}#jvFloat .jv-g5>div{height:92px}#jvFloat[hidden]{display:none}
+#jvTog{position:fixed;left:12px;bottom:28px;z-index:61;min-width:56px;min-height:44px;padding:0 12px;border:0;cursor:pointer;color:#d6f6ff;font:600 12px "Tektur",monospace;letter-spacing:.16em;background:rgba(0,214,255,.14);box-shadow:inset 0 0 0 1px rgba(0,214,255,.6),0 0 14px rgba(0,214,255,.3);clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+@media(max-width:900px){.jv-hudrow{grid-template-columns:1fr}.jv-g5{grid-template-columns:repeat(3,1fr)}.jv-g5>div{height:92px}.jv-g5>div:nth-child(n+4){height:92px}.jv-chips{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){html.jv-on .jv-scanbg{display:none}}
