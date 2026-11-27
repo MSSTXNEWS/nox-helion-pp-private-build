@@ -17,11 +17,19 @@
   J.get = jget; J.flat = flat;
   J.on = function (f) { subs.push(f); f(cur, agenda, status); };
   J.start = function () { if (DEMO) { demoSeed(); emit(); } else { poll(); setInterval(poll, 10000); } var d = $('#jvDemo'); if (d) d.hidden = !DEMO; };
-  /* ---- рамки: Arwes createFrame из vendor/nox-fx/hud.js ---- */
+  /* ---- рамки: Arwes createFrame из vendor/arwes-frames ---- */
   J.frames = function (root) {
     (root || document).querySelectorAll('.jv-f').forEach(function (f) { if (f.querySelector(':scope>svg.jv-hudf')) return; var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'jv-hudf'); s.setAttribute('aria-hidden', 'true'); f.appendChild(s); });
     if (SM && !Q.has('hud')) return;
-    import(new URL('./vendor/nox-fx/hud.js', location.href).href).then(function (m) { m.hud('svg.jv-hudf'); document.querySelectorAll('svg.jv-hudf').forEach(function (s) { s.style.setProperty('--arwes-frames-line-color', 'rgba(0,214,255,.95)'); s.style.setProperty('--arwes-frames-bg-color', 'transparent'); s.style.color = '#00d6ff'; }); }).catch(function () {});
+    /* Arwes: vendor/arwes-frames (реальная сборка @arwes/frames), вариант рамки в data-jv-frame: corners|octagon|kranox|nefrex|lines|underline|nero|header|circle */
+    import(new URL('./vendor/arwes-frames/arwes-frames.esm.js', location.href).href).then(function (m) {
+      var mk = { corners: function () { return m.createFrameCornersSettings({ styled: true, padding: 1, strokeWidth: 1, cornerLength: 12 }); }, octagon: function () { return m.createFrameOctagonSettings({ styled: true, padding: 1, strokeWidth: 1, squareSize: 12 }); }, kranox: function () { return m.createFrameKranoxSettings({ styled: true, padding: 1, strokeWidth: 1, squareSize: 12 }); }, nefrex: function () { return m.createFrameNefrexSettings({ styled: true, padding: 1, strokeWidth: 1, squareSize: 10, smallLineLength: 10, largeLineLength: 40 }); }, lines: function () { return m.createFrameLinesSettings({ styled: true, padding: 1, largeLineWidth: 2, smallLineWidth: 1, smallLineLength: 14 }); }, underline: function () { return m.createFrameUnderlineSettings({ styled: true, padding: 1, strokeWidth: 1, squareSize: 10 }); }, nero: function () { return m.createFrameNeroSettings({ styled: true, padding: 1, cornerLength: 14, cornerWidth: 2 }); }, header: function () { return m.createFrameHeaderSettings({ styled: true, padding: 1, strokeWidth: 1, decoWidth: 24, contentLength: 120 }); }, circle: function () { return m.createFrameCircleSettings({ styled: true, padding: 1, strokeWidth: 1 }); } };
+      (root || document).querySelectorAll('svg.jv-hudf').forEach(function (s) {
+        if (s.__jvArwes) return; s.__jvArwes = 1; var v = (s.parentNode && s.parentNode.getAttribute('data-jv-frame')) || 'corners';
+        s.style.setProperty('--arwes-frames-line-color', 'rgba(0,214,255,.95)'); s.style.setProperty('--arwes-frames-bg-color', 'transparent'); s.style.setProperty('--arwes-frames-deco-color', 'rgba(127,233,255,1)'); s.style.color = '#00d6ff';
+        try { m.createFrame(s, (mk[v] || mk.corners)()); } catch (e) { console.warn('[jv] arwes frame', v, e); }
+      });
+    }).catch(function () {});
   };
   /* ---- gauge ---- */
   var C = '#00d6ff';
@@ -49,7 +57,7 @@
       else { g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); g.shadowBlur = 0; g.fillStyle = '#6fa3b8'; g.font = '600 11px Tektur,monospace'; g.fillText('MIC HOLD: нажмите МИКРОФОН', 8, h / 2 - 8); J.mic.level = 0; return; }
       g.stroke(); g.shadowBlur = 0; if (DEMO) { g.fillStyle = '#ffaa3c'; g.font = '600 10px ui-monospace'; g.fillText('ДЕМО', w - 36, 12); } }
     function loop(t) { T = t / 1000; if (!document.hidden) draw(); if (!RM) requestAnimationFrame(loop); } requestAnimationFrame(loop); if (RM) draw();
-    if (micBtn) micBtn.addEventListener('click', function () { if (an) { st.getTracks().forEach(function (x) { x.stop(); }); an = null; J.mic.on = false; return; } navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) { st = s; var ac = new AudioContext(), a = ac.createAnalyser(); a.fftSize = 512; ac.createMediaStreamSource(s).connect(a); an = a; buf = new Uint8Array(a.fftSize); J.mic.on = true; }).catch(function () {}); });
+    if (micBtn) micBtn.addEventListener('click', function () { if (an) { st.getTracks().forEach(function (x) { x.stop(); }); an = null; J.mic.an = null; J.mic.on = false; return; } navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) { st = s; var ac = new AudioContext(), a = ac.createAnalyser(); a.fftSize = 512; ac.createMediaStreamSource(s).connect(a); an = a; J.mic.an = a; buf = new Uint8Array(a.fftSize); J.mic.on = true; }).catch(function () {}); });
   };
   /* ---- списки: задачи (agenda) и сервисы (status) ---- */
   J.tasks = function (ul) { J.on(function (c, a) { ul.textContent = ''; var it = a && Array.isArray(a.ideas) ? a.ideas.filter(function (i) { return i && i.title && !/done|closed|reject|dismiss/i.test(String(i.status || '')); }).slice(0, 5) : []; if (!it.length) { var l = document.createElement('li'); l.className = 'hold'; l.textContent = 'HOLD: повестка недоступна'; ul.appendChild(l); return; } it.forEach(function (i) { var l = document.createElement('li'); l.textContent = String(i.title).slice(0, 40); var s = document.createElement('small'); s.textContent = String(i.status || '').toUpperCase().slice(0, 6); l.appendChild(s); ul.appendChild(l); }); }); };

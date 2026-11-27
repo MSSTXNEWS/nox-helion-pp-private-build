@@ -1,0 +1,56 @@
+/* NOX · JARVIS KIT: стили переиспользуемых компонентов (ring, bars, spectrum, checklist, kv, dock-static, tag, btn). Подключать после nox-jarvis.css. Цели касания >=44px. */
+body.jv.jv-kit{overflow:auto;height:auto;min-height:100vh}
+.jv-kit .jv-wrap{position:relative;z-index:3;max-width:1400px;margin:0 auto;padding:68px 14px 28px;display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.jv-kit .c3{grid-column:span 3}.jv-kit .c4{grid-column:span 4}.jv-kit .c6{grid-column:span 6}.jv-kit .c8{grid-column:span 8}.jv-kit .c12{grid-column:span 12}
+@media(max-width:900px){.jv-kit .jv-wrap{grid-template-columns:1fr;padding-top:62px}.jv-kit .jv-wrap>*{grid-column:auto!important}}
+.jv-kit .jv-top{position:fixed}
+.jv-kit .jv-bar{position:fixed;top:10px;right:14px;z-index:7;display:flex;gap:8px}
+.jv-kit .jv-bar a{min-height:44px;min-width:44px;padding:0 14px;display:flex;align-items:center;justify-content:center;color:rgb(var(--jv-c));text-decoration:none;font:600 11px/1 ui-monospace,monospace;letter-spacing:.14em;border:1px solid rgba(var(--jv-c),.5);background:rgba(3,22,32,.8)}
+.jv-kit .jv-bar a:focus-visible,.jv-kit .jv-bar a:hover{background:rgba(var(--jv-c),.2);outline:2px solid rgb(var(--jv-c));outline-offset:2px}
+@media(max-width:900px){.jv-kit .jv-bar{display:none}}
+.jv-kit .jv-h{padding-top:10px}.jv-kit .jv-note{font:11px/1.4 ui-monospace,monospace;color:var(--jv-mu);padding:0 14px 10px}
+/* круговой индикатор */
+.jv-ring{position:relative;display:block;width:100%;aspect-ratio:1;max-width:150px;margin:0 auto}
+.jv-ring svg{width:100%;height:100%;display:block;overflow:visible}
+.jv-ring .tk line{stroke:rgba(var(--jv-c),.45);stroke-width:.6}
+.jv-ring .tr{fill:none;stroke:rgba(var(--jv-c),.14);stroke-width:5}
+.jv-ring .pg{fill:none;stroke:rgb(var(--jv-c));stroke-width:5;stroke-linecap:butt;filter:drop-shadow(0 0 4px rgba(var(--jv-c),.9));transition:stroke-dashoffset .6s ease}
+.jv-ring .v{fill:#fff;font:600 17px "Tektur",ui-monospace,monospace}.jv-ring .l{fill:var(--jv-mu);font:600 7px "Tektur",ui-monospace,monospace;letter-spacing:.18em}
+.jv-ring.hold .pg{stroke:#456;filter:none}.jv-ring.hold .v{fill:var(--jv-mu);font-size:13px}
+.jv-ring:before{content:"";position:absolute;inset:-3%;border-radius:50%;border:1px dashed rgba(var(--jv-c),.35);animation:jv-spin 24s linear infinite}
+@keyframes jv-spin{to{transform:rotate(360deg)}}
+.jv-rings{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:6px 14px 14px}
+/* гистограмма */
+.jv-bars{display:flex;align-items:flex-end;gap:3px;height:96px;padding:0 14px 12px;border-bottom:0}
+.jv-bars i{flex:1;min-width:2px;background:linear-gradient(180deg,rgba(var(--jv-c),.95),rgba(var(--jv-c),.15));box-shadow:0 0 6px rgba(var(--jv-c),.4);transition:height .5s ease}
+.jv-bars.hold i{background:rgba(120,140,150,.25);box-shadow:none}
+.jv-spec{display:block;width:calc(100% - 28px);height:84px;margin:0 14px 12px}
+/* список задач */
+.jv-chk{list-style:none;margin:0;padding:0 14px 12px;display:flex;flex-direction:column;gap:6px}
+.jv-chk li{background:rgba(var(--jv-c),.06);border:1px solid rgba(var(--jv-c),.18)}.jv-chk li.hold{padding:12px;color:var(--jv-mu);min-height:44px}
+.jv-chk label{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 12px;cursor:pointer;font-size:13px}
+.jv-chk input{appearance:none;-webkit-appearance:none;flex:0 0 22px;width:22px;height:22px;margin:0;border:1px solid rgb(var(--jv-c));background:transparent;cursor:pointer;position:relative}
+.jv-chk input:checked{background:rgba(var(--jv-c),.3)}.jv-chk input:checked::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.jv-chk input:focus-visible{outline:2px solid rgb(var(--jv-c));outline-offset:3px}.jv-chk li.dn span{text-decoration:line-through;color:var(--jv-mu)}
+/* ключ-значение, теги */
+.jv-kv{padding:4px 14px 12px;display:flex;flex-direction:column;gap:2px}.jv-kv div{display:flex;justify-content:space-between;align-items:center;min-height:32px;border-bottom:1px solid rgba(var(--jv-c),.12);font:12px ui-monospace,monospace}
+.jv-kv span{color:var(--jv-mu);letter-spacing:.08em}.jv-kv b{color:#fff;font-weight:600}.jv-kv b.hold{color:var(--jv-mu)}
+.jv-tags{display:flex;flex-wrap:wrap;gap:8px;padding:6px 14px 14px}.jv-tag{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border:1px solid rgba(var(--jv-c),.5);color:rgb(var(--jv-c));font:600 11px ui-monospace,monospace;letter-spacing:.14em}.jv-tag.a{border-color:rgba(var(--jv-a),.6);color:rgb(var(--jv-a))}.jv-tag.bad{border-color:rgba(var(--jv-bad),.6);color:rgb(var(--jv-bad))}
+/* кнопки */
+.jv-act{display:flex;flex-wrap:wrap;gap:10px;padding:6px 14px 14px}.jv-act button{min-height:44px;min-width:44px;padding:0 18px;background:rgba(var(--jv-c),.1);border:1px solid rgb(var(--jv-c));color:var(--jv-tx);font:600 12px "Tektur",sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.jv-act button:hover,.jv-act button:focus-visible{background:rgba(var(--jv-c),.28);outline:2px solid rgb(var(--jv-c));outline-offset:2px}.jv-act button.pri{background:rgb(var(--jv-c));color:#021016}
+/* сцена со сферой */
+.jv-kit .jv-stage{height:360px;min-height:300px;flex:none}
+@media(max-width:900px){.jv-kit .jv-stage{height:300px}}
+/* док статичный (в потоке страницы) */
+.jv-dock.static{position:static;transform:none;justify-content:center;padding:8px 14px 14px;flex-wrap:wrap}
+.jv-dock.static .jv-btn{min-width:110px;min-height:76px;flex:1 1 110px;max-width:170px;position:relative}.jv-dock.static .jv-btn.x{display:flex}
+.jv-btn[aria-pressed=true]{color:#fff}
+/* рамки Arwes */
+.jv-frames{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:6px 14px 14px}@media(max-width:900px){.jv-frames{grid-template-columns:repeat(2,1fr)}}
+.jv-fr{position:relative;min-height:84px;display:flex;align-items:center;justify-content:center;font:600 11px/1 ui-monospace,monospace;letter-spacing:.16em;color:var(--jv-mu);background:rgba(var(--jv-c),.04)}
+.jv-fr>svg.jv-hudf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.jv-fr span{position:relative}
+.jv-kit .jv-chat{flex:none;height:300px}
+.jv-kit .jv-wave{height:70px}
+.jv-kit .jv-stage{height:420px}.jv-kit .jv-stage .st{bottom:-2px}
+@media(max-width:900px){.jv-kit .jv-stage{height:340px}}

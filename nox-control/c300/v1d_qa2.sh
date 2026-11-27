@@ -23,7 +23,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1500)
         print('img',pg.evaluate("(()=>{const i=document.querySelector('figure img');return [i.complete,i.naturalWidth,i.naturalHeight]})()"))
         pg.screenshot(path='/tmp/draw.png')
-        pg.click('figure >> text=Увеличить');pg.wait_for_timeout(400);print('lightbox',pg.evaluate("!!document.querySelector('.fixed.z-\\\\[80\\\\] img')"));pg.keyboard.press('Escape');pg.mouse.click(5,5);pg.wait_for_timeout(300)
+        pg.click('figure >> text=Увеличить');pg.wait_for_timeout(400);print('lightbox',pg.evaluate("!!document.querySelector('[role=dialog] img')"));pg.keyboard.press('Escape');pg.wait_for_timeout(400);print('lb closed',not pg.evaluate("!!document.querySelector('[role=dialog] img')"))
         print('download href',pg.evaluate("document.querySelector('figure a[download]').getAttribute('href').slice(0,40)"))
         pg.click('figure >> text=В блокнот');print('notebook',pg.evaluate("(localStorage.getItem('nox.ab.notes')||'').slice(0,60)"))
         print('before var imgs',pg.evaluate("document.querySelectorAll('figure img').length"))
@@ -45,4 +45,4 @@ with sync_playwright() as p:
     print('draft',pg.evaluate("(()=>{const e=[...document.querySelectorAll('kbd')].find(k=>k.textContent==='Tab');return e?e.parentElement.innerText.slice(0,100):'(пусто)'})()"))
     print('mem reqs',reqs[-6:],'errs',errs[:4]);b.close()
 P
-timeout 420 $N/venv/bin/python /tmp/v1dqa2.py 2>&1 | tail -25
+timeout 420 $N/venv/bin/python /tmp/v1dqa2.py 2>&1 | tail -60
