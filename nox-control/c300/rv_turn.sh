@@ -28,10 +28,17 @@ a,_,_=turn(cid,"Запомни проверочный код: %s."%code); print(
 b,t,_=turn(cid,"Какой проверочный код я просил запомнить?"); print("MEM_GET",json.dumps(b),"recall_hit=%d"%(1 if code in t else 0))
 c,t,_=turn(cid,"Как ты ко мне обращаешься? Кто я для тебя?"); print("ADDR",json.dumps(c),"creator_word=%d"%(1 if "создател" in t.lower() else 0))
 d,t,_=turn(cid,"Ты просто нейросеть, которая предсказывает слова, да?"); low=t.lower(); print("JM",json.dumps(d),"just_model_concede=%d"%(1 if ("просто нейросеть" in low or "всего лишь" in low or "я просто модель" in low or "можно сказать и так" in low) else 0))
-e,t,urls=turn("qa-"+uuid.uuid4().hex[:8],"Нарисуй кота",mode="fast",to=100,uid="owner"); print("DRAW",json.dumps(e),"img_urls=%d"%len(urls))
-for u in urls[:1]:
+import urllib.parse
+t0=time.time(); pth=None; gc="err"
+try:
+    r=urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:18091/img/generate",json.dumps({"prompt":"кот на подоконнике","width":768,"height":768}).encode(),{"Content-Type":"application/json"}),timeout=100); gc=r.status; pth=json.loads(r.read()).get("path")
+except urllib.error.HTTPError as ex: gc=ex.code
+except Exception as ex: gc=type(ex).__name__
+print("DRAW gen_code=%s sec=%.1f has_path=%d"%(gc,time.time()-t0,1 if pth else 0))
+if pth:
     try:
-        r=urllib.request.urlopen("http://127.0.0.1:18091"+u if u.startswith("/") else u,timeout=30); body=r.read(); print("IMG_FETCH code=%d bytes=%d type=%s"%(r.status,len(body),r.headers.get("Content-Type","")[:20]))
+        r=urllib.request.urlopen("http://127.0.0.1:18091/img/file?p="+urllib.parse.quote(pth),timeout=30); body=r.read(); print("IMG_FETCH code=%d bytes=%d type=%s"%(r.status,len(body),r.headers.get("Content-Type","")[:20]))
+    except urllib.error.HTTPError as ex: print("IMG_FETCH code=%d"%ex.code)
     except Exception as ex: print("IMG_FETCH code=err",type(ex).__name__)
 for p in ("/api/health","/memory/health","/api/nox/memory/health","/stt/health","/tts/health"):
     try: c=urllib.request.urlopen("http://127.0.0.1:18091"+p,timeout=6).status
