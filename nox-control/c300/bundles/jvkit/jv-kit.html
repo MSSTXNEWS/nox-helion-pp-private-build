@@ -1,0 +1,57 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>NOX · JARVIS KIT · витрина компонентов</title>
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css"><link rel="stylesheet" href="./nox-jarvis.css"><link rel="stylesheet" href="./nox-jarvis-kit.css">
+<script type="importmap">{"imports":{"three":"./vendor/three-new/build/three.module.js"}}</script></head>
+<body class="jv jv-kit"><div class="jv-grid"></div><div class="jv-scan"></div>
+<div class="jv-side l"><span>NOX <b>HELION</b></span><span id="jvDemo" class="jv-demo" hidden>ДЕМО</span></div>
+<div class="jv-top jv-f" data-jv-frame="nefrex"><h1>JARVIS KIT</h1></div>
+<div class="jv-bar"><a href="?demo=1">ДЕМО</a><a href="?">LIVE</a></div>
+<main class="jv-wrap">
+ <section class="jv-f c12" data-jv-frame="corners"><div class="jv-h">СФЕРА · СОСТОЯНИЯ<i></i><em>three r187 · NOXjv.core</em></div>
+  <div class="jv-stage"><canvas id="gl"></canvas><div class="lbl">NOX</div><div class="st">СОСТОЯНИЕ <b id="stv">ОЖИДАНИЕ</b></div></div>
+  <div class="jv-act" id="orbBtns"><button type="button" data-s="idle">Ожидание</button><button type="button" data-s="listen">Слушает</button><button type="button" data-s="think">Думает</button><button type="button" data-s="speak">Говорит</button></div></section>
+
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">КРУГОВЫЕ ИНДИКАТОРЫ<i></i><em>J.ring</em></div>
+  <div class="jv-rings"><div class="jv-ring" data-key="gpu_util_pct" data-label="GPU"></div><div class="jv-ring" data-key="gpu_vram_pct" data-label="VRAM"></div><div class="jv-ring" data-key="gpu_temp_c" data-label="TEMP" data-unit="°"></div></div></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ГОЛОС · ВОЛНА<i></i><em id="micS">J.wave</em></div>
+  <div class="jv-b"><canvas class="jv-wave" id="wave"></canvas></div><div class="jv-act"><button type="button" id="mic">Микрофон</button></div></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ГОЛОС · СПЕКТР<i></i><em>J.spectrum</em></div>
+  <canvas class="jv-spec" id="spec"></canvas><div class="jv-note">Спектр берёт AnalyserNode микрофона; без него HOLD.</div></section>
+
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ГИСТОГРАММА<i></i><em>J.bars</em></div><div class="jv-bars" id="bars"></div></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ГРАФИК · ECHARTS<i></i><em>J.chart</em></div><div class="jv-ch" id="ch"></div></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ТЕЛЕМЕТРИЯ<i></i><em>J.kv</em></div><div class="jv-kv" id="kv"></div></section>
+
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">СПИСОК ЗАДАЧ<i></i><em>J.checklist</em></div><ul class="jv-chk" id="chk"></ul></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">СЕРВИСЫ<i></i><em>J.events</em></div><div class="jv-b"><ul class="jv-li" id="events"></ul></div></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ТЕГИ И КНОПКИ<i></i><em>.jv-tag .jv-act</em></div>
+  <div class="jv-tags"><span class="jv-tag">ONLINE</span><span class="jv-tag a">HOLD</span><span class="jv-tag bad">DOWN</span></div><div class="jv-act"><button type="button" class="pri">Выполнить</button><button type="button">Отмена</button></div></section>
+
+ <section class="jv-f c8" data-jv-frame="corners"><div class="jv-h">ДИАЛОГ · DEEP CHAT<i></i><em>deep-chat 2.5.1</em></div><deep-chat id="chat" style="display:block;width:100%;height:240px;border:0"></deep-chat></section>
+ <section class="jv-f c4" data-jv-frame="corners"><div class="jv-h">ДОК<i></i><em>J.dock</em></div>
+  <nav class="jv-dock static" id="dock" aria-label="Быстрые действия">
+   <button class="jv-btn jv-f on" type="button" data-name="chat"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Чат</span></button>
+   <button class="jv-btn jv-f" type="button" data-name="voice"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голос</span></button>
+   <button class="jv-btn jv-f" type="button" data-name="tasks"><svg class="ic" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg><span>Задачи</span></button></nav></section>
+
+ <section class="jv-f c12" data-jv-frame="corners"><div class="jv-h">РАМКИ · ARWES<i></i><em>vendor/arwes-frames (@arwes/frames 1.0.0-next.25020502, MIT)</em></div>
+  <div class="jv-frames" id="frames"></div></section>
+</main>
+<script src="./vendor/echarts/echarts.min.js"></script><script src="./vendor/gsap/gsap.min.js"></script><script src="./vendor/deep-chat/deep-chat.iife.js"></script><script src="./nox-jarvis.js"></script><script src="./nox-jarvis-kit.js"></script>
+<script type="module">
+import { core } from './nox-jarvis-core.js';
+const J = NOXjv, $ = (s) => document.querySelector(s);
+document.querySelectorAll('.jv-ring').forEach((e) => J.ring(e));
+J.bars($('#bars'), 'gpu_util_pct', 100, 24); J.chart($('#ch'), 'gpu_power_w', 'line', 450); J.kv($('#kv'), [['GPU', 'gpu_util_pct', '%'], ['VRAM', 'gpu_vram_pct', '%'], ['TEMP', 'gpu_temp_c', '°C'], ['POWER', 'gpu_power_w', ' Вт']]);
+J.wave($('#wave'), $('#mic')); J.spectrum($('#spec')); J.checklist($('#chk')); J.events($('#events')); J.dock($('#dock'));
+const frames = $('#frames'); ['corners', 'octagon', 'kranox', 'nefrex', 'lines', 'underline'].forEach((v) => { const d = document.createElement('div'); d.className = 'jv-fr'; d.dataset.jvFrame = v; d.innerHTML = '<span>' + v.toUpperCase() + '</span><svg class="jv-hudf" aria-hidden="true"></svg>'; frames.appendChild(d); });
+const dc = $('#chat'); dc.chatStyle = { backgroundColor: 'transparent', border: 'none', fontFamily: 'inherit' };
+dc.messageStyles = { default: { shared: { bubble: { borderRadius: '0', fontSize: '13px', padding: '6px 10px', maxWidth: '94%' } }, user: { bubble: { background: 'rgba(0,214,255,.14)', color: '#d6f6ff', border: '1px solid rgba(0,214,255,.4)' } }, ai: { bubble: { background: 'transparent', color: '#d6f6ff', border: '1px solid rgba(0,214,255,.2)' } } } };
+dc.textInput = { styles: { container: { backgroundColor: 'rgba(0,214,255,.06)', border: '1px solid rgba(0,214,255,.5)', borderRadius: '0', margin: '0 8px 8px', width: 'calc(100% - 16px)' }, text: { color: '#d6f6ff', fontSize: '14px' } }, placeholder: { text: 'Сообщение NOX…', style: { color: '#6fa3b8' } } };
+dc.submitButtonStyles = { submit: { container: { default: { backgroundColor: '#00d6ff', borderRadius: '0', width: '44px', height: '44px' } }, svg: { styles: { default: { filter: 'brightness(0.1)' } } } } };
+dc.auxiliaryStyle = '#messages{padding:6px 8px}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(0,214,255,.4)}#text-input-container{overflow:hidden!important}';
+dc.introMessage = { text: 'Витрина: ответы заглушены, /api/turn не вызывается.' };
+dc.connect = { handler: (body, signals) => { signals.onResponse({ text: 'Эхо витрины.' }); J.pulse && J.pulse(.7); } };
+const stv = $('#stv'); document.querySelectorAll('#orbBtns button').forEach((b) => b.addEventListener('click', () => J.orbState(stv, b.dataset.s)));
+core($('#gl'), {});
+J.start(); J.frames(); J.intro();
+</script></body></html>

@@ -1,0 +1,66 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>NOX · Резонанс · концепт C (JARVIS)</title>
+<link rel="stylesheet" href="./vendor/fonts-wow/fonts.css"><link rel="stylesheet" href="./nox-jarvis.css"><link rel="stylesheet" href="./nox-jarvis-kit.css">
+<script type="importmap">{"imports":{"three":"./vendor/three-new/build/three.module.js"}}</script></head>
+<body class="jv"><div class="jv-grid"></div><div class="jv-scan"></div>
+<div class="jv-side l"><span>NOX <b>HELION</b></span><span id="jvDemo" class="jv-demo" hidden>ДЕМО</span></div><div class="jv-side r"><span>РЕЗОНАНС</span><b id="jvClock">--:--</b></div>
+<div class="jv-top jv-f"><h1>РЕЗОНАНС</h1></div>
+<div class="jv-main">
+ <div class="jv-strip" id="strip" aria-label="Мини-виджеты"></div>
+ <div class="jv-col">
+  <section class="jv-f" data-jv-frame="octagon"><div class="jv-h">СИСТЕМА<i></i><em>GPU</em></div><div class="jv-rings"><div class="jv-ring" data-key="gpu_util_pct" data-label="GPU"></div><div class="jv-ring" data-key="gpu_vram_pct" data-label="VRAM"></div><div class="jv-ring" data-key="gpu_temp_c" data-label="TEMP" data-unit="°"></div></div></section>
+  <section class="jv-f" data-jv-frame="corners"><div class="jv-h">ГОЛОС<i></i><em id="micS">MIC</em></div><canvas class="jv-spec" id="spec"></canvas><canvas id="wave" width="1" height="1" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" aria-hidden="true"></canvas></section>
+  <section class="jv-f"><div class="jv-h">НАГРУЗКА GPU<i></i><em>%</em></div><div class="jv-ch" id="cA"></div></section>
+  <section class="jv-f"><div class="jv-h">ПИТАНИЕ<i></i><em>Вт</em></div><div class="jv-ch" id="cB"></div></section>
+ </div>
+ <div class="jv-ctr">
+  <div class="jv-stage"><canvas id="gl"></canvas><div class="lbl">NOX</div><div class="st">СОСТОЯНИЕ <b id="stv">ОЖИДАНИЕ</b></div></div>
+  <section class="jv-f jv-chat" data-jv-frame="nefrex"><div class="jv-h">ДИАЛОГ<i></i><em>NOX</em></div><deep-chat id="chat"></deep-chat></section>
+ </div>
+ <div class="jv-col">
+  <section class="jv-f" data-jv-frame="kranox"><div class="jv-h">ЗАДАЧИ ДНЯ<i></i><em>AGENDA</em></div><ul class="jv-chk" id="tasks"></ul></section>
+  <section class="jv-f grow"><div class="jv-h">СЕРВИСЫ<i></i><em>STATUS</em></div><div class="jv-b" style="min-height:0;overflow:auto"><ul class="jv-li" id="events"></ul></div></section>
+  <section class="jv-f"><div class="jv-h">ТЕМПЕРАТУРА<i></i><em>°C</em></div><div class="jv-ch" id="cC"></div></section>
+ </div>
+</div>
+<nav class="jv-dock" aria-label="Быстрые действия">
+ <button class="jv-btn jv-f on" type="button"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Чат</span></button>
+ <button class="jv-btn jv-f" type="button" id="mic"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Голос</span></button>
+ <button class="jv-btn jv-f" type="button"><svg class="ic" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg><span>Задачи</span></button>
+ <button class="jv-btn jv-f x" type="button"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Система</span></button>
+ <button class="jv-btn jv-f x" type="button"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>Память</span></button>
+</nav>
+<script src="./vendor/echarts/echarts.min.js"></script><script src="./vendor/gsap/gsap.min.js"></script><script src="./vendor/deep-chat/deep-chat.iife.js"></script><script src="./nox-jarvis.js?v=kit1"></script><script src="./nox-jarvis-kit.js?v=kit1"></script>
+<script type="module">
+import { core } from './nox-jarvis-core.js';
+const J = NOXjv, $ = (s) => document.querySelector(s);
+document.querySelectorAll('.jv-ring').forEach((e) => J.ring(e));
+J.chart($('#cA'), 'gpu_util_pct', 'bar', 100); J.chart($('#cB'), 'gpu_power_w', 'line', 450); J.chart($('#cC'), 'gpu_temp_c', 'line', 100);
+J.wave($('#wave'), $('#mic')); J.spectrum($('#spec')); J.checklist($('#tasks')); J.events($('#events'));
+const dc = $('#chat'); dc.chatStyle = { backgroundColor: 'transparent', border: 'none', fontFamily: 'inherit' };
+dc.messageStyles = { default: { shared: { bubble: { borderRadius: '0', fontSize: '13px', padding: '6px 10px', maxWidth: '94%' } }, user: { bubble: { background: 'rgba(0,214,255,.14)', color: '#d6f6ff', border: '1px solid rgba(0,214,255,.4)' } }, ai: { bubble: { background: 'transparent', color: '#d6f6ff', border: '1px solid rgba(0,214,255,.2)' } } } };
+dc.textInput = { styles: { container: { backgroundColor: 'rgba(0,214,255,.06)', border: '1px solid rgba(0,214,255,.5)', borderRadius: '0', margin: '0 8px 8px', width: 'calc(100% - 16px)' }, text: { color: '#d6f6ff', fontSize: '14px' } }, placeholder: { text: 'Сообщение NOX…', style: { color: '#6fa3b8' } } };
+dc.submitButtonStyles = { submit: { container: { default: { backgroundColor: '#00d6ff', borderRadius: '0', width: '32px', height: '32px' } }, svg: { styles: { default: { filter: 'brightness(0.1)' } } } } };
+dc.auxiliaryStyle = '#messages{padding:6px 8px}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(0,214,255,.4)}#text-input-container{overflow:hidden!important}';
+dc.history = []; const CID = (() => { try { let v = localStorage.getItem('nox.jv.cid'); if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : 'c' + Date.now()); localStorage.setItem('nox.jv.cid', v); } return v; } catch (e) { return 'c' + Date.now(); } })();
+const stv = $('#stv'), think = (s) => s.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').replace(/^\s+/, '');
+/* настоящий /api/turn (NDJSON), протокол как в nox-dc.js; в demo=1 только заглушка */
+dc.connect = { stream: true, handler: (body, signals) => {
+  const m = body && body.messages || [], last = m[m.length - 1], text = last && (last.text || last.content) || '';
+  if (!text) { signals.onResponse({ error: 'Пустое сообщение' }); return; }
+  if (J.DEMO) { signals.onResponse({ text: 'Демо: /api/turn отключён.' }); return; }
+  const ctrl = new AbortController(); let raw = '', sent = '', err = null; signals.onOpen(); stv.textContent = 'ДУМАЕТ';
+  signals.stopClicked.listener = () => { fetch('/api/turn/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversation_id: CID }) }).catch(() => {}); setTimeout(() => ctrl.abort(), 1200); };
+  fetch('/api/turn', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal, body: JSON.stringify({ conversation_id: CID, message: text, mode: 'auto', length: 'normal', source: 'full' }) }).then((r) => {
+    if (!r.ok) throw new Error('HTTP ' + r.status); const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+    const pump = () => rd.read().then((x) => { if (x.done) return; buf += dec.decode(x.value, { stream: true }); let k;
+      while ((k = buf.indexOf('\n')) >= 0) { const ln = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (!ln) continue; let f; try { f = JSON.parse(ln); } catch (e) { continue; }
+        if (f.t === 'delta' && f.text) { raw += f.text; const v = think(raw); if (v.length > sent.length) { signals.onResponse({ text: v.slice(sent.length) }); sent = v; stv.textContent = 'ОТВЕЧАЕТ'; J.pulse && J.pulse(.7); } } else if (f.t === 'error') err = f.error; }
+      return pump(); });
+    return pump();
+  }).catch((e) => { if (!ctrl.signal.aborted) err = String(e.message || e); }).then(() => { if (!sent && !err) signals.onResponse({ text: '(пустой ответ)' }); if (err) signals.onResponse({ text: (sent ? '\n\n' : '') + 'Ошибка: ' + err }); signals.onClose(); stv.textContent = 'ОЖИДАНИЕ'; });
+} };
+dc.introMessage = undefined;
+requestAnimationFrame(() => { const inp = () => dc.shadowRoot && dc.shadowRoot.querySelector('#text-input'); const c = core($('#gl'), { input: { addEventListener: (e, f) => { const t = setInterval(() => { const i = inp(); if (i) { i.addEventListener('input', f); clearInterval(t); } }, 300); } } }); });
+J.strip($('#strip')); J.start(); J.frames(); J.intro();
+const clk = () => { $('#jvClock').textContent = new Date().toTimeString().slice(0, 5); }; clk(); setInterval(clk, 20000);
+</script></body></html>

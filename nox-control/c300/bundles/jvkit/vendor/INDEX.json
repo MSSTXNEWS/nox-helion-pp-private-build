@@ -1,0 +1,2439 @@
+{
+ "base": "site/vendor (URL: ./vendor/<имя>/ от корня сайта)",
+ "modules": [
+  {
+   "name": "3d-force-graph",
+   "pkg": "3d-force-graph",
+   "version": "1.80.2",
+   "license": "MIT",
+   "dir": "vendor/3d-force-graph/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/3d-force-graph/3d-force-graph.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/3d-force-graph/3d-force-graph.esm.js 1473K",
+    "vendor/3d-force-graph/3d-force-graph.iife.js 1474K"
+   ],
+   "global": "NOX_3d_force_graph",
+   "totalKB": 2947,
+   "main": "vendor/3d-force-graph/3d-force-graph.esm.js"
+  },
+  {
+   "name": "ag-ui",
+   "pkg": "@ag-ui/client",
+   "version": "1.0.5",
+   "license": "MIT",
+   "dir": "vendor/ag-ui/",
+   "page": "чат (протокол агентов)",
+   "example": "import * as M from \"./vendor/ag-ui/ag-ui.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ag-ui/ag-ui.esm.js 695K",
+    "vendor/ag-ui/ag-ui.iife.js 695K"
+   ],
+   "global": "NOX_ag_ui",
+   "totalKB": 1390,
+   "main": "vendor/ag-ui/ag-ui.esm.js"
+  },
+  {
+   "name": "arwes-animated",
+   "pkg": "@arwes/animated",
+   "version": "1.0.0-next.25020502",
+   "license": "MIT",
+   "dir": "vendor/arwes-animated/",
+   "page": "HUD, все",
+   "example": "",
+   "note": "собран esbuild из @arwes/animated (27.11, REFS)",
+   "status": "ok",
+   "files": [
+    "vendor/arwes-animated/arwes-animated.esm.js",
+    "vendor/arwes-animated/arwes-animated.iife.js"
+   ],
+   "main": "vendor/arwes-animated/arwes-animated.esm.js",
+   "global": "NOX_arwes_animated"
+  },
+  {
+   "name": "arwes-frames",
+   "pkg": "@arwes/frames",
+   "version": "1.0.0-next.25020502",
+   "license": "MIT",
+   "dir": "vendor/arwes-frames/",
+   "page": "HUD, все",
+   "example": "import {createFrame} from \"./vendor/arwes-frames/arwes-frames.esm.js\"",
+   "note": "собран esbuild из @arwes/frames (27.11, REFS)",
+   "status": "ok",
+   "files": [
+    "vendor/arwes-frames/arwes-frames.esm.js",
+    "vendor/arwes-frames/arwes-frames.iife.js"
+   ],
+   "main": "vendor/arwes-frames/arwes-frames.esm.js",
+   "global": "NOX_arwes_frames"
+  },
+  {
+   "name": "assistant-ui",
+   "pkg": "@assistant-ui/react",
+   "version": "0.15.38",
+   "license": "MIT",
+   "dir": "vendor/assistant-ui/",
+   "page": "чат",
+   "example": "import * as M from \"./vendor/assistant-ui/assistant-ui.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/assistant-ui/assistant-ui.esm.js 996K",
+    "vendor/assistant-ui/assistant-ui.iife.js 997K"
+   ],
+   "global": "NOX_assistant_ui",
+   "totalKB": 1993,
+   "main": "vendor/assistant-ui/assistant-ui.esm.js"
+  },
+  {
+   "name": "blocknote",
+   "pkg": "@blocknote/core",
+   "version": "0.57.0",
+   "license": "MPL-2.0",
+   "dir": "vendor/blocknote/",
+   "page": "заметки",
+   "example": "import * as M from \"./vendor/blocknote/blocknote.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/blocknote/blocknote.css 29K",
+    "vendor/blocknote/blocknote.esm.js 626K",
+    "vendor/blocknote/blocknote.iife.js 626K"
+   ],
+   "global": "NOX_blocknote",
+   "totalKB": 1281,
+   "main": "vendor/blocknote/blocknote.esm.js"
+  },
+  {
+   "name": "boardgame-io",
+   "pkg": "boardgame.io",
+   "version": "0.50.2",
+   "license": "MIT",
+   "dir": "vendor/boardgame-io/",
+   "page": "игры",
+   "example": "import * as M from \"./vendor/boardgame-io/boardgame-io.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/boardgame-io/boardgame-io.esm.js 58K",
+    "vendor/boardgame-io/boardgame-io.iife.js 58K"
+   ],
+   "global": "NOX_boardgame_io",
+   "totalKB": 116,
+   "main": "vendor/boardgame-io/boardgame-io.esm.js"
+  },
+  {
+   "name": "broadcast-channel",
+   "pkg": "broadcast-channel",
+   "version": "7.4.0",
+   "license": "MIT",
+   "dir": "vendor/broadcast-channel/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/broadcast-channel/broadcast-channel.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/broadcast-channel/broadcast-channel.esm.js 17K",
+    "vendor/broadcast-channel/broadcast-channel.iife.js 17K"
+   ],
+   "global": "NOX_broadcast_channel",
+   "totalKB": 34,
+   "main": "vendor/broadcast-channel/broadcast-channel.esm.js"
+  },
+  {
+   "name": "butterchurn",
+   "pkg": "butterchurn",
+   "version": "2.6.7",
+   "license": "MIT",
+   "dir": "vendor/butterchurn/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/butterchurn/butterchurn.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/butterchurn/butterchurn.esm.js 195K",
+    "vendor/butterchurn/butterchurn.iife.js 195K"
+   ],
+   "global": "NOX_butterchurn",
+   "totalKB": 390,
+   "main": "vendor/butterchurn/butterchurn.esm.js"
+  },
+  {
+   "name": "canvas-confetti",
+   "pkg": "canvas-confetti",
+   "version": "1.9.4",
+   "license": "ISC",
+   "dir": "vendor/canvas-confetti/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/canvas-confetti/canvas-confetti.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/canvas-confetti/canvas-confetti.esm.js 11K",
+    "vendor/canvas-confetti/canvas-confetti.iife.js 11K"
+   ],
+   "global": "NOX_canvas_confetti",
+   "totalKB": 22,
+   "main": "vendor/canvas-confetti/canvas-confetti.esm.js"
+  },
+  {
+   "name": "chessground",
+   "pkg": "chessground",
+   "version": "9.2.1",
+   "license": "GPL-3.0-or-later",
+   "dir": "vendor/chessground/",
+   "page": "игры (шахматы)",
+   "example": "import * as M from \"./vendor/chessground/chessground.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/chessground/assets/chessground.base.css 3K",
+    "vendor/chessground/assets/chessground.brown.css 3K",
+    "vendor/chessground/assets/chessground.cburnett.css 11K",
+    "vendor/chessground/chessground.esm.js 31K",
+    "vendor/chessground/chessground.iife.js 31K"
+   ],
+   "global": "NOX_chessground",
+   "totalKB": 79,
+   "main": "vendor/chessground/chessground.esm.js"
+  },
+  {
+   "name": "chrono-node",
+   "pkg": "chrono-node",
+   "version": "2.10.3",
+   "license": "MIT",
+   "dir": "vendor/chrono-node/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/chrono-node/chrono-node.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/chrono-node/chrono-node.esm.js 239K",
+    "vendor/chrono-node/chrono-node.iife.js 239K"
+   ],
+   "global": "NOX_chrono_node",
+   "totalKB": 478,
+   "main": "vendor/chrono-node/chrono-node.esm.js"
+  },
+  {
+   "name": "circuitsvis",
+   "pkg": "circuitsvis",
+   "version": "v1.43.3",
+   "license": "MIT",
+   "dir": "vendor/circuitsvis/",
+   "page": "мозг, обучение",
+   "example": "<script src=\"./vendor/circuitsvis/dist/cdn/esm.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/circuitsvis/dist/cdn/esm.js 1259K",
+    "vendor/circuitsvis/dist/cdn/esm.js.map 6773K",
+    "vendor/circuitsvis/dist/cdn/iife.js 1265K",
+    "vendor/circuitsvis/dist/cdn/iife.js.map 6777K",
+    "vendor/circuitsvis/dist/cdn/without-react.iife.js 1126K",
+    "vendor/circuitsvis/dist/cdn/without-react.iife.js.map 6439K",
+    "vendor/circuitsvis/dist/commonjs/index.js 63K",
+    "vendor/circuitsvis/dist/commonjs/index.js.map 125K",
+    "vendor/circuitsvis/dist/module/activations/TextNeuronActivations.d.ts 2K",
+    "vendor/circuitsvis/dist/module/activations/TextNeuronActivations.d.ts.map 1K",
+    "vendor/circuitsvis/dist/module/activations/TextNeuronActivations.js 5K",
+    "vendor/circuitsvis/dist/module/activations/TextNeuronActivations.js.map 4K"
+   ],
+   "totalKB": 24336,
+   "main": "vendor/circuitsvis/dist/cdn/esm.js"
+  },
+  {
+   "name": "cmdk",
+   "pkg": "cmdk",
+   "version": "1.1.1",
+   "license": "MIT",
+   "dir": "vendor/cmdk/",
+   "page": "палитра команд (React)",
+   "example": "import * as M from \"./vendor/cmdk/cmdk.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/cmdk/cmdk.esm.js 66K",
+    "vendor/cmdk/cmdk.iife.js 66K"
+   ],
+   "global": "NOX_cmdk",
+   "totalKB": 132,
+   "main": "vendor/cmdk/cmdk.esm.js"
+  },
+  {
+   "name": "cobe",
+   "pkg": "cobe",
+   "version": "2.0.1",
+   "license": "MIT",
+   "dir": "vendor/cobe/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/cobe/cobe.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/cobe/cobe.esm.js 13K",
+    "vendor/cobe/cobe.iife.js 13K"
+   ],
+   "global": "NOX_cobe",
+   "totalKB": 26,
+   "main": "vendor/cobe/cobe.esm.js"
+  },
+  {
+   "name": "codemirror",
+   "pkg": "codemirror",
+   "version": "5.63.0",
+   "license": "MIT",
+   "dir": "vendor/codemirror/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/codemirror/codemirror.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/codemirror/codemirror.esm.js 170K",
+    "vendor/codemirror/codemirror.iife.js 170K"
+   ],
+   "global": "NOX_codemirror",
+   "totalKB": 340,
+   "main": "vendor/codemirror/codemirror.esm.js"
+  },
+  {
+   "name": "colorjs.io",
+   "pkg": "colorjs.io",
+   "version": "0.5.2",
+   "license": "MIT",
+   "dir": "vendor/colorjs.io/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/colorjs.io/colorjs.io.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/colorjs.io/colorjs.io.esm.js 54K",
+    "vendor/colorjs.io/colorjs.io.iife.js 55K"
+   ],
+   "global": "NOX_colorjs_io",
+   "totalKB": 109,
+   "main": "vendor/colorjs.io/colorjs.io.esm.js"
+  },
+  {
+   "name": "cosmos-gl",
+   "pkg": "@cosmos.gl/graph",
+   "version": "3.6.0",
+   "license": "MIT",
+   "dir": "vendor/cosmos-gl/",
+   "page": "мозг, знания",
+   "example": "import * as M from \"./vendor/cosmos-gl/cosmos-gl.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/cosmos-gl/cosmos-gl.esm.js 811K",
+    "vendor/cosmos-gl/cosmos-gl.iife.js 811K"
+   ],
+   "global": "NOX_cosmos_gl",
+   "totalKB": 1622,
+   "main": "vendor/cosmos-gl/cosmos-gl.esm.js"
+  },
+  {
+   "name": "cytoscape",
+   "pkg": "cytoscape",
+   "version": "3.35.0",
+   "license": "MIT",
+   "dir": "vendor/cytoscape/",
+   "page": "мозг, знания",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/cytoscape/dist/cytoscape.min.js"
+   ]
+  },
+  {
+   "name": "d3",
+   "pkg": "d3",
+   "version": "7.9.2",
+   "license": "ISC",
+   "dir": "vendor/d3/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/d3/d3.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/d3/d3.esm.js 287K",
+    "vendor/d3/d3.iife.js 288K"
+   ],
+   "global": "NOX_d3",
+   "totalKB": 575,
+   "main": "vendor/d3/d3.esm.js"
+  },
+  {
+   "name": "d3-celestial",
+   "pkg": "d3-celestial",
+   "version": "0.7.35",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/d3-celestial/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/d3-celestial/d3-celestial.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/d3-celestial/d3-celestial.esm.js 325K",
+    "vendor/d3-celestial/d3-celestial.iife.js 325K"
+   ],
+   "global": "NOX_d3_celestial",
+   "totalKB": 650,
+   "main": "vendor/d3-celestial/d3-celestial.esm.js"
+  },
+  {
+   "name": "d3-sankey",
+   "pkg": "d3-sankey",
+   "version": "0.12.3",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/d3-sankey/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/d3-sankey/d3-sankey.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/d3-sankey/d3-sankey.esm.js 9K",
+    "vendor/d3-sankey/d3-sankey.iife.js 9K"
+   ],
+   "global": "NOX_d3_sankey",
+   "totalKB": 17,
+   "main": "vendor/d3-sankey/d3-sankey.esm.js"
+  },
+  {
+   "name": "d3-shape",
+   "pkg": "d3-shape",
+   "version": "3.2.1",
+   "license": "ISC",
+   "dir": "vendor/d3-shape/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/d3-shape/d3-shape.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/d3-shape/d3-shape.esm.js 34K",
+    "vendor/d3-shape/d3-shape.iife.js 34K"
+   ],
+   "global": "NOX_d3_shape",
+   "totalKB": 68,
+   "main": "vendor/d3-shape/d3-shape.esm.js"
+  },
+  {
+   "name": "dagre",
+   "pkg": "dagre",
+   "version": "0.8.5",
+   "license": "MIT",
+   "dir": "vendor/dagre/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/dagre/dagre.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/dagre/dagre.esm.js 85K",
+    "vendor/dagre/dagre.iife.js 85K"
+   ],
+   "global": "NOX_dagre",
+   "totalKB": 170,
+   "main": "vendor/dagre/dagre.esm.js"
+  },
+  {
+   "name": "dashjs",
+   "pkg": "dashjs",
+   "version": "5.3.0",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/dashjs/",
+   "page": "кино, ТВ (DASH)",
+   "example": "<script src=\"./vendor/dashjs/dash.all.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/dashjs/dash.all.min.js 812K"
+   ],
+   "totalKB": 812,
+   "main": "vendor/dashjs/dash.all.min.js"
+  },
+  {
+   "name": "deep-chat",
+   "pkg": "deep-chat",
+   "version": "2.5.1",
+   "license": "MIT",
+   "dir": "vendor/deep-chat/",
+   "page": "чат, голос",
+   "example": "import * as M from \"./vendor/deep-chat/deep-chat.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/deep-chat/deep-chat.esm.js 464K",
+    "vendor/deep-chat/deep-chat.iife.js 464K",
+    "vendor/deep-chat/deepChat.bundle.js 378K"
+   ],
+   "global": "NOX_deep_chat",
+   "totalKB": 1306,
+   "main": "vendor/deep-chat/deep-chat.esm.js"
+  },
+  {
+   "name": "dnd-kit-core",
+   "pkg": "@dnd-kit/core",
+   "version": "6.3.1",
+   "license": "MIT",
+   "dir": "vendor/dnd-kit-core/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/dnd-kit-core/dnd-kit-core.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/dnd-kit-core/dnd-kit-core.esm.js 56K",
+    "vendor/dnd-kit-core/dnd-kit-core.iife.js 56K"
+   ],
+   "global": "NOX_dnd_kit_core",
+   "totalKB": 112,
+   "main": "vendor/dnd-kit-core/dnd-kit-core.esm.js"
+  },
+  {
+   "name": "drawio",
+   "pkg": "git jgraph/drawio (webapp)",
+   "version": "git",
+   "license": "Apache-2.0",
+   "dir": "vendor/drawio/",
+   "main": "vendor/drawio/index.html",
+   "example": "<iframe src=\"./vendor/drawio/index.html?embed=1&proto=json&spin=1&ui=dark\">",
+   "page": "доска",
+   "status": "ok",
+   "totalKB": 114965,
+   "files": []
+  },
+  {
+   "name": "earth",
+   "pkg": "git cambecc/earth (public)",
+   "version": "git",
+   "license": "MIT",
+   "dir": "vendor/earth/",
+   "main": "vendor/earth/index.html",
+   "example": "<iframe src=\"./vendor/earth/index.html\"> (данные ветров нужно подкладывать в data/weather самим)",
+   "page": "атлас",
+   "status": "ok",
+   "totalKB": 9123,
+   "files": []
+  },
+  {
+   "name": "echarts",
+   "pkg": "echarts",
+   "version": "6.1.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/echarts/",
+   "page": "органы, финансы",
+   "example": "<script src=\"./vendor/echarts/echarts.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/echarts/echarts.min.js 1096K"
+   ],
+   "totalKB": 1096,
+   "main": "vendor/echarts/echarts.min.js"
+  },
+  {
+   "name": "embla-carousel",
+   "pkg": "embla-carousel",
+   "version": "8.6.0",
+   "license": "MIT",
+   "dir": "vendor/embla-carousel/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/embla-carousel/embla-carousel.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/embla-carousel/embla-carousel.esm.js 18K",
+    "vendor/embla-carousel/embla-carousel.iife.js 18K"
+   ],
+   "global": "NOX_embla_carousel",
+   "totalKB": 36,
+   "main": "vendor/embla-carousel/embla-carousel.esm.js"
+  },
+  {
+   "name": "excalidraw-excalidraw",
+   "pkg": "@excalidraw/excalidraw",
+   "version": "0.18.1",
+   "license": "MIT",
+   "dir": "vendor/excalidraw-excalidraw/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/excalidraw-excalidraw/excalidraw-excalidraw.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/excalidraw-excalidraw/excalidraw-excalidraw.esm.js 8130K",
+    "vendor/excalidraw-excalidraw/excalidraw-excalidraw.iife.js 8130K"
+   ],
+   "global": "NOX_excalidraw_excalidraw",
+   "totalKB": 16260,
+   "main": "vendor/excalidraw-excalidraw/excalidraw-excalidraw.esm.js"
+  },
+  {
+   "name": "excalidraw-mermaid-to-excalidraw",
+   "pkg": "@excalidraw/mermaid-to-excalidraw",
+   "version": "2.2.2",
+   "license": "MIT",
+   "dir": "vendor/excalidraw-mermaid-to-excalidraw/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js 3474K",
+    "vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.iife.js 3474K"
+   ],
+   "global": "NOX_excalidraw_mermaid_to_excalidraw",
+   "totalKB": 6949,
+   "main": "vendor/excalidraw-mermaid-to-excalidraw/excalidraw-mermaid-to-excalidraw.esm.js"
+  },
+  {
+   "name": "fabric",
+   "pkg": "fabric",
+   "version": "7.4.0",
+   "license": "MIT",
+   "dir": "vendor/fabric/",
+   "page": "фото, доска",
+   "example": "<script src=\"./vendor/fabric/index.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/fabric/index.min.js 292K",
+    "vendor/fabric/index.min.mjs 292K"
+   ],
+   "totalKB": 584,
+   "main": "vendor/fabric/index.min.js"
+  },
+  {
+   "name": "fast-average-color",
+   "pkg": "fast-average-color",
+   "version": "9.6.0",
+   "license": "MIT",
+   "dir": "vendor/fast-average-color/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/fast-average-color/fast-average-color.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/fast-average-color/fast-average-color.esm.js 7K",
+    "vendor/fast-average-color/fast-average-color.iife.js 7K"
+   ],
+   "global": "NOX_fast_average_color",
+   "totalKB": 14,
+   "main": "vendor/fast-average-color/fast-average-color.esm.js"
+  },
+  {
+   "name": "ffmpeg",
+   "pkg": "@ffmpeg/ffmpeg",
+   "version": "0.12.15",
+   "license": "MIT",
+   "dir": "vendor/ffmpeg/",
+   "page": "студия, видео",
+   "example": "<script src=\"./vendor/ffmpeg/esm/classes.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ffmpeg/esm/classes.d.ts 5K",
+    "vendor/ffmpeg/esm/classes.js 10K",
+    "vendor/ffmpeg/esm/const.d.ts 1K",
+    "vendor/ffmpeg/esm/const.js 1K",
+    "vendor/ffmpeg/esm/empty.d.mts 0K",
+    "vendor/ffmpeg/esm/empty.mjs 0K",
+    "vendor/ffmpeg/esm/errors.d.ts 0K",
+    "vendor/ffmpeg/esm/errors.js 0K",
+    "vendor/ffmpeg/esm/index.d.ts 0K",
+    "vendor/ffmpeg/esm/index.js 0K",
+    "vendor/ffmpeg/esm/types.d.ts 4K",
+    "vendor/ffmpeg/esm/types.js 0K"
+   ],
+   "totalKB": 26,
+   "main": "vendor/ffmpeg/esm/classes.js"
+  },
+  {
+   "name": "ffmpeg-core",
+   "pkg": "@ffmpeg/core",
+   "version": "0.12.10",
+   "license": "GPL-2.0-or-later",
+   "dir": "vendor/ffmpeg-core/",
+   "page": "студия",
+   "example": "<script src=\"./vendor/ffmpeg-core/esm/ffmpeg-core.js\"></script>",
+   "note": "ffmpeg-core.wasm ~30 МБ",
+   "status": "ok",
+   "files": [
+    "vendor/ffmpeg-core/esm/ffmpeg-core.js 109K",
+    "vendor/ffmpeg-core/esm/ffmpeg-core.wasm 31477K"
+   ],
+   "totalKB": 31586,
+   "main": "vendor/ffmpeg-core/esm/ffmpeg-core.js"
+  },
+  {
+   "name": "ffmpeg-util",
+   "pkg": "@ffmpeg/util",
+   "version": "0.12.2",
+   "license": "MIT",
+   "dir": "vendor/ffmpeg-util/",
+   "page": "студия",
+   "example": "<script src=\"./vendor/ffmpeg-util/esm/const.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ffmpeg-util/esm/const.d.ts 0K",
+    "vendor/ffmpeg-util/esm/const.js 0K",
+    "vendor/ffmpeg-util/esm/errors.d.ts 0K",
+    "vendor/ffmpeg-util/esm/errors.js 0K",
+    "vendor/ffmpeg-util/esm/index.d.ts 1K",
+    "vendor/ffmpeg-util/esm/index.js 5K",
+    "vendor/ffmpeg-util/esm/types.d.ts 0K",
+    "vendor/ffmpeg-util/esm/types.js 0K"
+   ],
+   "totalKB": 7,
+   "main": "vendor/ffmpeg-util/esm/const.js"
+  },
+  {
+   "name": "file-type",
+   "pkg": "file-type",
+   "version": "22.3.0",
+   "license": "MIT",
+   "dir": "vendor/file-type/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/file-type/file-type.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/file-type/file-type.esm.js 75K",
+    "vendor/file-type/file-type.iife.js 75K"
+   ],
+   "global": "NOX_file_type",
+   "totalKB": 149,
+   "main": "vendor/file-type/file-type.esm.js"
+  },
+  {
+   "name": "foliate-js",
+   "pkg": "git johnfactotum/foliate-js",
+   "version": "git",
+   "license": "MIT",
+   "dir": "vendor/foliate-js/",
+   "main": "vendor/foliate-js/epub.js",
+   "example": "import \"./vendor/foliate-js/view.js\" ; <foliate-view>",
+   "page": "читалка",
+   "status": "ok",
+   "totalKB": 12648,
+   "files": []
+  },
+  {
+   "name": "fontsource-doto",
+   "pkg": "@fontsource/doto",
+   "version": "5.3.0",
+   "license": "OFL-1.1",
+   "dir": "vendor/fontsource-doto/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/fontsource-doto/fontsource-doto.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/fontsource-doto/fontsource-doto.esm.css 22K",
+    "vendor/fontsource-doto/fontsource-doto.esm.js 0K",
+    "vendor/fontsource-doto/fontsource-doto.iife.css 22K",
+    "vendor/fontsource-doto/fontsource-doto.iife.js 1K"
+   ],
+   "global": "NOX_fontsource_doto",
+   "totalKB": 45,
+   "main": "vendor/fontsource-doto/fontsource-doto.esm.js"
+  },
+  {
+   "name": "frappe-gantt",
+   "pkg": "frappe-gantt",
+   "version": "1.2.2",
+   "license": "MIT",
+   "dir": "vendor/frappe-gantt/",
+   "page": "проекты",
+   "example": "<script src=\"./vendor/frappe-gantt/dist/frappe-gantt.es.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/frappe-gantt/dist/frappe-gantt.css 7K",
+    "vendor/frappe-gantt/dist/frappe-gantt.es.js 63K",
+    "vendor/frappe-gantt/dist/frappe-gantt.umd.js 47K"
+   ],
+   "totalKB": 117,
+   "main": "vendor/frappe-gantt/dist/frappe-gantt.es.js"
+  },
+  {
+   "name": "fuse.js",
+   "pkg": "fuse.js",
+   "version": "7.5.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/fuse.js/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/fuse.js/fuse.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/fuse.js/fuse.js.esm.js 26K",
+    "vendor/fuse.js/fuse.js.iife.js 26K"
+   ],
+   "global": "NOX_fuse_js",
+   "totalKB": 52,
+   "main": "vendor/fuse.js/fuse.js.esm.js"
+  },
+  {
+   "name": "globe-gl",
+   "pkg": "globe.gl",
+   "version": "2.46.2",
+   "license": "MIT",
+   "dir": "vendor/globe-gl/",
+   "page": "атлас",
+   "example": "<script src=\"./vendor/globe-gl/globe.gl.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/globe-gl/globe.gl.min.js 1841K"
+   ],
+   "totalKB": 1841,
+   "main": "vendor/globe-gl/globe.gl.min.js"
+  },
+  {
+   "name": "grapesjs",
+   "pkg": "grapesjs",
+   "version": "0.23.9",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/grapesjs/",
+   "page": "конструктор",
+   "example": "<script src=\"./vendor/grapesjs/grapes.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/grapesjs/grapes.min.css 60K",
+    "vendor/grapesjs/grapes.min.js 1125K"
+   ],
+   "totalKB": 1185,
+   "main": "vendor/grapesjs/grapes.min.js"
+  },
+  {
+   "name": "graphology",
+   "pkg": "graphology",
+   "version": "0.26.0",
+   "license": "MIT",
+   "dir": "vendor/graphology/",
+   "page": "знания (граф)",
+   "example": "import * as M from \"./vendor/graphology/graphology.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/graphology/graphology.esm.js 66K",
+    "vendor/graphology/graphology.iife.js 67K"
+   ],
+   "global": "NOX_graphology",
+   "totalKB": 133,
+   "main": "vendor/graphology/graphology.esm.js"
+  },
+  {
+   "name": "gridstack",
+   "pkg": "gridstack",
+   "version": "14.1.1",
+   "license": "MIT",
+   "dir": "vendor/gridstack/",
+   "page": "главная",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/gridstack/gridstack-all.js",
+    "vendor/gridstack/gridstack.min.css"
+   ]
+  },
+  {
+   "name": "gsap",
+   "pkg": "gsap",
+   "version": "3.15.1",
+   "license": "Standard 'no charge' license: https://gsap.com/standard-license.",
+   "dir": "vendor/gsap/",
+   "page": "все (анимации)",
+   "example": "<script src=\"./vendor/gsap/gsap.min.js\"></script> или import {gsap} from \"./vendor/gsap/gsap.esm.js\"",
+   "note": "лицензия GSAP Standard no-charge, не MIT",
+   "status": "ok",
+   "files": [
+    "vendor/gsap/Draggable.min.js 35K",
+    "vendor/gsap/Flip.min.js 25K",
+    "vendor/gsap/ScrollTrigger.min.js 44K",
+    "vendor/gsap/gsap.esm.js 324K",
+    "vendor/gsap/gsap.iife.js 325K",
+    "vendor/gsap/gsap.min.js 72K"
+   ],
+   "global": "NOX_gsap",
+   "totalKB": 824,
+   "main": "vendor/gsap/gsap.esm.js"
+  },
+  {
+   "name": "highlight.js",
+   "pkg": "highlight.js",
+   "version": "11.12.0",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/highlight.js/",
+   "page": "чат, код",
+   "example": "import * as M from \"./vendor/highlight.js/highlight.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/highlight.js/atom-one-dark.min.css 1K",
+    "vendor/highlight.js/github-dark.min.css 1K",
+    "vendor/highlight.js/github.min.css 1K",
+    "vendor/highlight.js/highlight.js.esm.js 161K",
+    "vendor/highlight.js/highlight.js.iife.js 161K"
+   ],
+   "global": "NOX_highlight_js",
+   "totalKB": 325,
+   "main": "vendor/highlight.js/highlight.js.esm.js"
+  },
+  {
+   "name": "hls.js",
+   "pkg": "hls.js",
+   "version": "1.7.4",
+   "license": "Apache-2.0",
+   "dir": "vendor/hls.js/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/hls.js/hls.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/hls.js/hls.js.esm.js 578K",
+    "vendor/hls.js/hls.js.iife.js 578K"
+   ],
+   "global": "NOX_hls_js",
+   "totalKB": 1156,
+   "main": "vendor/hls.js/hls.js.esm.js"
+  },
+  {
+   "name": "howler",
+   "pkg": "howler",
+   "version": "2.2.4",
+   "license": "MIT",
+   "dir": "vendor/howler/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/howler/howler.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/howler/howler.esm.js 36K",
+    "vendor/howler/howler.iife.js 36K"
+   ],
+   "global": "NOX_howler",
+   "totalKB": 72,
+   "main": "vendor/howler/howler.esm.js"
+  },
+  {
+   "name": "html-to-image",
+   "pkg": "html-to-image",
+   "version": "1.11.13",
+   "license": "MIT",
+   "dir": "vendor/html-to-image/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/html-to-image/html-to-image.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/html-to-image/html-to-image.esm.js 14K",
+    "vendor/html-to-image/html-to-image.iife.js 14K"
+   ],
+   "global": "NOX_html_to_image",
+   "totalKB": 27,
+   "main": "vendor/html-to-image/html-to-image.esm.js"
+  },
+  {
+   "name": "img-comparison-slider",
+   "pkg": "img-comparison-slider",
+   "version": "8.0.7",
+   "license": "MIT",
+   "dir": "vendor/img-comparison-slider/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/img-comparison-slider/img-comparison-slider.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/img-comparison-slider/img-comparison-slider.esm.js 12K",
+    "vendor/img-comparison-slider/img-comparison-slider.iife.js 12K"
+   ],
+   "global": "NOX_img_comparison_slider",
+   "totalKB": 24,
+   "main": "vendor/img-comparison-slider/img-comparison-slider.esm.js"
+  },
+  {
+   "name": "ios-haptics",
+   "pkg": "ios-haptics",
+   "version": "3.3.0",
+   "license": "MIT",
+   "dir": "vendor/ios-haptics/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/ios-haptics/ios-haptics.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ios-haptics/ios-haptics.esm.js 1K",
+    "vendor/ios-haptics/ios-haptics.iife.js 1K"
+   ],
+   "global": "NOX_ios_haptics",
+   "totalKB": 2,
+   "main": "vendor/ios-haptics/ios-haptics.esm.js"
+  },
+  {
+   "name": "jsonforms",
+   "pkg": "@jsonforms/core",
+   "version": "3.8.0",
+   "license": "MIT",
+   "dir": "vendor/jsonforms/",
+   "page": "настройки",
+   "example": "import * as M from \"./vendor/jsonforms/jsonforms.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/jsonforms/jsonforms.esm.js 241K",
+    "vendor/jsonforms/jsonforms.iife.js 242K"
+   ],
+   "global": "NOX_jsonforms",
+   "totalKB": 483,
+   "main": "vendor/jsonforms/jsonforms.esm.js"
+  },
+  {
+   "name": "jupyterlite",
+   "pkg": "pip jupyterlite-core + pyodide-kernel (статика)",
+   "version": "pip",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/jupyterlite/",
+   "main": "vendor/jupyterlite/lab/index.html",
+   "example": "<iframe src=\"./vendor/jupyterlite/lab/index.html\"> или ./vendor/jupyterlite/repl/index.html?kernel=python",
+   "page": "помощник, обучение",
+   "status": "ok",
+   "totalKB": 68604,
+   "files": []
+  },
+  {
+   "name": "katex",
+   "pkg": "katex",
+   "version": "0.19.1",
+   "license": "MIT",
+   "dir": "vendor/katex/",
+   "page": "чат",
+   "example": "<link rel=\"stylesheet\" href=\"./vendor/katex/katex.min.css\">",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/katex/auto-render.min.js 3K",
+    "vendor/katex/fonts/KaTeX_AMS-Regular.ttf 62K",
+    "vendor/katex/fonts/KaTeX_AMS-Regular.woff 33K",
+    "vendor/katex/fonts/KaTeX_AMS-Regular.woff2 27K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Bold.ttf 12K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff 8K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2 7K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Regular.ttf 12K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff 7K",
+    "vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2 7K",
+    "vendor/katex/fonts/KaTeX_Fraktur-Bold.ttf 19K",
+    "vendor/katex/fonts/KaTeX_Fraktur-Bold.woff 13K"
+   ],
+   "totalKB": 1346,
+   "main": "vendor/katex/auto-render.min.js"
+  },
+  {
+   "name": "kbar",
+   "pkg": "kbar",
+   "version": "1.0.0",
+   "license": "MIT",
+   "dir": "vendor/kbar/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/kbar/kbar.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/kbar/kbar.esm.js 126K",
+    "vendor/kbar/kbar.iife.js 126K"
+   ],
+   "global": "NOX_kbar",
+   "totalKB": 251,
+   "main": "vendor/kbar/kbar.esm.js"
+  },
+  {
+   "name": "konva",
+   "pkg": "konva",
+   "version": "10.11.0",
+   "license": "MIT",
+   "dir": "vendor/konva/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/konva/konva.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/konva/konva.esm.js 192K",
+    "vendor/konva/konva.iife.js 192K"
+   ],
+   "global": "NOX_konva",
+   "totalKB": 384,
+   "main": "vendor/konva/konva.esm.js"
+  },
+  {
+   "name": "lightweight-charts",
+   "pkg": "lightweight-charts",
+   "version": "5.3.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/lightweight-charts/",
+   "page": "финансы, главная",
+   "example": "<script src=\"./vendor/lightweight-charts/lightweight-charts.production.mjs\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/lightweight-charts/lightweight-charts.production.mjs 185K",
+    "vendor/lightweight-charts/lightweight-charts.standalone.production.js 194K",
+    "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs 194K"
+   ],
+   "totalKB": 573,
+   "main": "vendor/lightweight-charts/lightweight-charts.production.mjs"
+  },
+  {
+   "name": "lindenmayer",
+   "pkg": "lindenmayer",
+   "version": "1.5.4",
+   "license": "MIT",
+   "dir": "vendor/lindenmayer/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/lindenmayer/lindenmayer.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/lindenmayer/lindenmayer.esm.js 8K",
+    "vendor/lindenmayer/lindenmayer.iife.js 8K"
+   ],
+   "global": "NOX_lindenmayer",
+   "totalKB": 15,
+   "main": "vendor/lindenmayer/lindenmayer.esm.js"
+  },
+  {
+   "name": "liquid-glass-react",
+   "pkg": "liquid-glass-react",
+   "version": "1.1.1",
+   "license": "MIT",
+   "dir": "vendor/liquid-glass-react/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/liquid-glass-react/liquid-glass-react.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/liquid-glass-react/liquid-glass-react.esm.js 61K",
+    "vendor/liquid-glass-react/liquid-glass-react.iife.js 61K"
+   ],
+   "global": "NOX_liquid_glass_react",
+   "totalKB": 122,
+   "main": "vendor/liquid-glass-react/liquid-glass-react.esm.js"
+  },
+  {
+   "name": "lottie-web",
+   "pkg": "lottie-web",
+   "version": "5.13.0",
+   "license": "MIT",
+   "dir": "vendor/lottie-web/",
+   "page": "все",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/lottie-web/build/player/lottie.min.js"
+   ]
+  },
+  {
+   "name": "lrc-kit",
+   "pkg": "lrc-kit",
+   "version": "1.2.1",
+   "license": "MIT",
+   "dir": "vendor/lrc-kit/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/lrc-kit/lrc-kit.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/lrc-kit/lrc-kit.esm.js 5K",
+    "vendor/lrc-kit/lrc-kit.iife.js 5K"
+   ],
+   "global": "NOX_lrc_kit",
+   "totalKB": 10,
+   "main": "vendor/lrc-kit/lrc-kit.esm.js"
+  },
+  {
+   "name": "maplibre-gl",
+   "pkg": "maplibre-gl",
+   "version": "6.19.0",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/maplibre-gl/",
+   "page": "атлас, карты",
+   "example": "<script src=\"./vendor/maplibre-gl/maplibre-gl-shared.mjs\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/maplibre-gl/maplibre-gl-shared.mjs 0K",
+    "vendor/maplibre-gl/maplibre-gl-worker.mjs 538K",
+    "vendor/maplibre-gl/maplibre-gl.css 70K",
+    "vendor/maplibre-gl/maplibre-gl.mjs 1080K"
+   ],
+   "totalKB": 1688,
+   "main": "vendor/maplibre-gl/maplibre-gl-shared.mjs"
+  },
+  {
+   "name": "markdown-it",
+   "pkg": "markdown-it",
+   "version": "15.0.3",
+   "license": "MIT",
+   "dir": "vendor/markdown-it/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/markdown-it/markdown-it.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/markdown-it/markdown-it.esm.js 98K",
+    "vendor/markdown-it/markdown-it.iife.js 99K"
+   ],
+   "global": "NOX_markdown_it",
+   "totalKB": 197,
+   "main": "vendor/markdown-it/markdown-it.esm.js"
+  },
+  {
+   "name": "masonry",
+   "pkg": "masonry-layout",
+   "version": "4.2.2",
+   "license": "MIT",
+   "dir": "vendor/masonry/",
+   "page": "фото, новости",
+   "example": "<script src=\"./vendor/masonry/masonry.pkgd.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/masonry/masonry.pkgd.min.js 24K"
+   ],
+   "totalKB": 24,
+   "main": "vendor/masonry/masonry.pkgd.min.js"
+  },
+  {
+   "name": "mediapipe-tasks-vision",
+   "pkg": "@mediapipe/tasks-vision",
+   "version": "1.2.3",
+   "license": "Apache-2.0",
+   "dir": "vendor/mediapipe-tasks-vision/",
+   "page": "вся сборка (жесты)",
+   "example": "import {FilesetResolver,GestureRecognizer} from \"./vendor/mediapipe-tasks-vision/vision_bundle.mjs\"; FilesetResolver.forVisionTasks(\"./vendor/mediapipe-tasks-vision/wasm\")",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/mediapipe-tasks-vision/hand_landmarker.task 7636K",
+    "vendor/mediapipe-tasks-vision/vision_bundle.cjs 152K",
+    "vendor/mediapipe-tasks-vision/vision_bundle.mjs 152K",
+    "vendor/mediapipe-tasks-vision/wasm/vision_wasm_internal.js 329K",
+    "vendor/mediapipe-tasks-vision/wasm/vision_wasm_internal.wasm 14322K",
+    "vendor/mediapipe-tasks-vision/wasm/vision_wasm_module_internal.js 329K",
+    "vendor/mediapipe-tasks-vision/wasm/vision_wasm_module_internal.wasm 14322K"
+   ],
+   "totalKB": 37242,
+   "main": "vendor/mediapipe-tasks-vision/vision_bundle.mjs"
+  },
+  {
+   "name": "mermaid",
+   "pkg": "mermaid",
+   "version": "12.3.0",
+   "license": "MIT",
+   "dir": "vendor/mermaid/",
+   "page": "чат",
+   "example": "<script src=\"./vendor/mermaid/mermaid.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/mermaid/mermaid.esm.min/abnfDiagram-7WIW2FYK.mjs 2K",
+    "vendor/mermaid/mermaid.esm.min/abnfDiagram-7WIW2FYK.mjs.map 7K",
+    "vendor/mermaid/mermaid.esm.min/architecture-LC7QOZUM-5NGVVLDI.mjs 0K",
+    "vendor/mermaid/mermaid.esm.min/architecture-LC7QOZUM-5NGVVLDI.mjs.map 0K",
+    "vendor/mermaid/mermaid.esm.min/architectureDiagram-K7MV6ERW.mjs 152K",
+    "vendor/mermaid/mermaid.esm.min/architectureDiagram-K7MV6ERW.mjs.map 615K",
+    "vendor/mermaid/mermaid.esm.min/blockDiagram-O3Z2S55I.mjs 40K",
+    "vendor/mermaid/mermaid.esm.min/blockDiagram-O3Z2S55I.mjs.map 129K",
+    "vendor/mermaid/mermaid.esm.min/bpmnIcons-YJSSVMIT.mjs 5K",
+    "vendor/mermaid/mermaid.esm.min/bpmnIcons-YJSSVMIT.mjs.map 7K",
+    "vendor/mermaid/mermaid.esm.min/c4Diagram-7J26TYSL.mjs 65K",
+    "vendor/mermaid/mermaid.esm.min/c4Diagram-7J26TYSL.mjs.map 199K"
+   ],
+   "totalKB": 29499,
+   "main": "vendor/mermaid/mermaid.esm.min.mjs"
+  },
+  {
+   "name": "meyda",
+   "pkg": "meyda",
+   "version": "5.6.3",
+   "license": "MIT",
+   "dir": "vendor/meyda/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/meyda/meyda.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/meyda/meyda.esm.js 16K",
+    "vendor/meyda/meyda.iife.js 16K"
+   ],
+   "global": "NOX_meyda",
+   "totalKB": 33,
+   "main": "vendor/meyda/meyda.esm.js"
+  },
+  {
+   "name": "motion",
+   "pkg": "motion",
+   "version": "14.14.0",
+   "license": "MIT",
+   "dir": "vendor/motion/",
+   "page": "все",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/motion/dist/motion.js"
+   ]
+  },
+  {
+   "name": "ninja-keys",
+   "pkg": "ninja-keys",
+   "version": "1.2.2",
+   "license": "MIT",
+   "dir": "vendor/ninja-keys/",
+   "page": "все (палитра команд)",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/ninja-keys/ninja-keys.js"
+   ]
+  },
+  {
+   "name": "nipplejs",
+   "pkg": "nipplejs",
+   "version": "1.0.4",
+   "license": "MIT",
+   "dir": "vendor/nipplejs/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/nipplejs/nipplejs.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/nipplejs/nipplejs.esm.js 21K",
+    "vendor/nipplejs/nipplejs.iife.js 21K"
+   ],
+   "global": "NOX_nipplejs",
+   "totalKB": 42,
+   "main": "vendor/nipplejs/nipplejs.esm.js"
+  },
+  {
+   "name": "nosleep.js",
+   "pkg": "nosleep.js",
+   "version": "0.12.0",
+   "license": "MIT",
+   "dir": "vendor/nosleep.js/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/nosleep.js/nosleep.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/nosleep.js/nosleep.js.esm.js 15K",
+    "vendor/nosleep.js/nosleep.js.iife.js 15K"
+   ],
+   "global": "NOX_nosleep_js",
+   "totalKB": 31,
+   "main": "vendor/nosleep.js/nosleep.js.esm.js"
+  },
+  {
+   "name": "novnc",
+   "pkg": "git novnc/noVNC",
+   "version": "git",
+   "license": "MPL-2.0",
+   "dir": "vendor/novnc/",
+   "main": "vendor/novnc/core/rfb.js",
+   "example": "import RFB from \"./vendor/novnc/core/rfb.js\"",
+   "page": "удалённый стол",
+   "status": "ok",
+   "totalKB": 1315,
+   "files": []
+  },
+  {
+   "name": "ogl",
+   "pkg": "ogl",
+   "version": "1.0.11",
+   "license": "Unlicense",
+   "dir": "vendor/ogl/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/ogl/ogl.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ogl/ogl.esm.js 131K",
+    "vendor/ogl/ogl.iife.js 131K"
+   ],
+   "global": "NOX_ogl",
+   "totalKB": 261,
+   "main": "vendor/ogl/ogl.esm.js"
+  },
+  {
+   "name": "orama-orama",
+   "pkg": "@orama/orama",
+   "version": "3.1.18",
+   "license": "Apache-2.0",
+   "dir": "vendor/orama-orama/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/orama-orama/orama-orama.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/orama-orama/orama-orama.esm.js 77K",
+    "vendor/orama-orama/orama-orama.iife.js 78K"
+   ],
+   "global": "NOX_orama_orama",
+   "totalKB": 155,
+   "main": "vendor/orama-orama/orama-orama.esm.js"
+  },
+  {
+   "name": "page-flip",
+   "pkg": "page-flip",
+   "version": "2.0.7",
+   "license": "MIT",
+   "dir": "vendor/page-flip/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/page-flip/page-flip.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/page-flip/page-flip.esm.js 43K",
+    "vendor/page-flip/page-flip.iife.js 43K"
+   ],
+   "global": "NOX_page_flip",
+   "totalKB": 87,
+   "main": "vendor/page-flip/page-flip.esm.js"
+  },
+  {
+   "name": "paper-design-shaders",
+   "pkg": "@paper-design/shaders",
+   "version": "0.0.82",
+   "license": "Apache-2.0",
+   "dir": "vendor/paper-design-shaders/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/paper-design-shaders/paper-design-shaders.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/paper-design-shaders/paper-design-shaders.esm.js 213K",
+    "vendor/paper-design-shaders/paper-design-shaders.iife.js 213K"
+   ],
+   "global": "NOX_paper_design_shaders",
+   "totalKB": 426,
+   "main": "vendor/paper-design-shaders/paper-design-shaders.esm.js"
+  },
+  {
+   "name": "pdf-lib",
+   "pkg": "pdf-lib",
+   "version": "1.17.1",
+   "license": "MIT",
+   "dir": "vendor/pdf-lib/",
+   "page": "документы",
+   "example": "<script src=\"./vendor/pdf-lib/pdf-lib.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/pdf-lib/pdf-lib.min.js 513K"
+   ],
+   "totalKB": 513,
+   "main": "vendor/pdf-lib/pdf-lib.min.js"
+  },
+  {
+   "name": "pdfjs",
+   "pkg": "pdfjs-dist",
+   "version": "6.5.438",
+   "license": "Apache-2.0",
+   "dir": "vendor/pdfjs/",
+   "page": "документы",
+   "example": "<script src=\"./vendor/pdfjs/pdf.min.mjs\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/pdfjs/pdf.min.mjs 463K",
+    "vendor/pdfjs/pdf.worker.min.mjs 1242K"
+   ],
+   "totalKB": 1705,
+   "main": "vendor/pdfjs/pdf.min.mjs"
+  },
+  {
+   "name": "peerjs",
+   "pkg": "peerjs",
+   "version": "1.5.5",
+   "license": "MIT",
+   "dir": "vendor/peerjs/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/peerjs/peerjs.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/peerjs/peerjs.esm.js 115K",
+    "vendor/peerjs/peerjs.iife.js 115K"
+   ],
+   "global": "NOX_peerjs",
+   "totalKB": 229,
+   "main": "vendor/peerjs/peerjs.esm.js"
+  },
+  {
+   "name": "perspective-transform",
+   "pkg": "perspective-transform",
+   "version": "1.1.3",
+   "license": "MIT",
+   "dir": "vendor/perspective-transform/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/perspective-transform/perspective-transform.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/perspective-transform/perspective-transform.esm.js 5K",
+    "vendor/perspective-transform/perspective-transform.iife.js 5K"
+   ],
+   "global": "NOX_perspective_transform",
+   "totalKB": 9,
+   "main": "vendor/perspective-transform/perspective-transform.esm.js"
+  },
+  {
+   "name": "phaser",
+   "pkg": "phaser",
+   "version": "4.2.1",
+   "license": "MIT",
+   "dir": "vendor/phaser/",
+   "page": "игры",
+   "example": "<script src=\"./vendor/phaser/phaser.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/phaser/phaser.min.js 1344K"
+   ],
+   "totalKB": 1344,
+   "main": "vendor/phaser/phaser.min.js"
+  },
+  {
+   "name": "pixi-filters",
+   "pkg": "pixi-filters",
+   "version": "6.1.5",
+   "license": "MIT",
+   "dir": "vendor/pixi-filters/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/pixi-filters/pixi-filters.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/pixi-filters/pixi-filters.esm.js 428K",
+    "vendor/pixi-filters/pixi-filters.iife.js 428K"
+   ],
+   "global": "NOX_pixi_filters",
+   "totalKB": 855,
+   "main": "vendor/pixi-filters/pixi-filters.esm.js"
+  },
+  {
+   "name": "pixi.js",
+   "pkg": "pixi.js",
+   "version": "8.23.0",
+   "license": "MIT",
+   "dir": "vendor/pixi.js/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/pixi.js/pixi.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/pixi.js/pixi.js.esm.js 988K",
+    "vendor/pixi.js/pixi.js.iife.js 988K"
+   ],
+   "global": "NOX_pixi_js",
+   "totalKB": 1976,
+   "main": "vendor/pixi.js/pixi.js.esm.js"
+  },
+  {
+   "name": "planets",
+   "pkg": "Solar System Scope textures",
+   "version": "-",
+   "license": "CC BY 4.0",
+   "dir": "vendor/planets/",
+   "main": "vendor/planets/2k/",
+   "example": "new THREE.TextureLoader().load(\"./vendor/planets/8k/8k_earth_daymap.jpg\"); кольца Сатурна: 2k/2k_saturn_ring_alpha.png; облака/ночь: *_earth_clouds, *_earth_nightmap",
+   "page": "фон (планеты); LICENSE и ATTRIBUTION.txt в папке",
+   "status": "ok",
+   "totalKB": 78834,
+   "files": []
+  },
+  {
+   "name": "pmtiles",
+   "pkg": "pmtiles",
+   "version": "4.5.0",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/pmtiles/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/pmtiles/pmtiles.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/pmtiles/pmtiles.esm.js 19K",
+    "vendor/pmtiles/pmtiles.iife.js 20K"
+   ],
+   "global": "NOX_pmtiles",
+   "totalKB": 39,
+   "main": "vendor/pmtiles/pmtiles.esm.js"
+  },
+  {
+   "name": "postprocessing",
+   "pkg": "postprocessing",
+   "version": "6.39.6",
+   "license": "Zlib",
+   "dir": "vendor/postprocessing/",
+   "page": "фон, сцена",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/postprocessing/build/index.js"
+   ]
+  },
+  {
+   "name": "qrcode",
+   "pkg": "qrcode",
+   "version": "1.5.4",
+   "license": "MIT",
+   "dir": "vendor/qrcode/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/qrcode/qrcode.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/qrcode/qrcode.esm.js 24K",
+    "vendor/qrcode/qrcode.iife.js 24K"
+   ],
+   "global": "NOX_qrcode",
+   "totalKB": 49,
+   "main": "vendor/qrcode/qrcode.esm.js"
+  },
+  {
+   "name": "react-markdown",
+   "pkg": "react-markdown",
+   "version": "10.1.0",
+   "license": "MIT",
+   "dir": "vendor/react-markdown/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/react-markdown/react-markdown.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/react-markdown/react-markdown.esm.js 126K",
+    "vendor/react-markdown/react-markdown.iife.js 126K"
+   ],
+   "global": "NOX_react_markdown",
+   "totalKB": 252,
+   "main": "vendor/react-markdown/react-markdown.esm.js"
+  },
+  {
+   "name": "readability",
+   "pkg": "@mozilla/readability",
+   "version": "0.6.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/readability/",
+   "page": "новости, читалка",
+   "example": "import * as M from \"./vendor/readability/readability.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/readability/Readability-readerable.js 4K",
+    "vendor/readability/Readability.js 88K",
+    "vendor/readability/readability.esm.js 34K",
+    "vendor/readability/readability.iife.js 34K"
+   ],
+   "global": "NOX_readability",
+   "totalKB": 160,
+   "main": "vendor/readability/readability.esm.js"
+  },
+  {
+   "name": "resonance-audio",
+   "pkg": "resonance-audio",
+   "version": "1.0.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/resonance-audio/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/resonance-audio/resonance-audio.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/resonance-audio/resonance-audio.esm.js 119K",
+    "vendor/resonance-audio/resonance-audio.iife.js 119K"
+   ],
+   "global": "NOX_resonance_audio",
+   "totalKB": 239,
+   "main": "vendor/resonance-audio/resonance-audio.esm.js"
+  },
+  {
+   "name": "reveal.js",
+   "pkg": "reveal.js",
+   "version": "6.0.2",
+   "license": "MIT",
+   "dir": "vendor/reveal.js/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/reveal.js/reveal.js.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/reveal.js/reveal.js.esm.js 116K",
+    "vendor/reveal.js/reveal.js.iife.js 116K"
+   ],
+   "global": "NOX_reveal_js",
+   "totalKB": 233,
+   "main": "vendor/reveal.js/reveal.js.esm.js"
+  },
+  {
+   "name": "ricky0123-vad-web",
+   "pkg": "@ricky0123/vad-web",
+   "version": "0.0.31",
+   "license": "ISC",
+   "dir": "vendor/ricky0123-vad-web/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/ricky0123-vad-web/ricky0123-vad-web.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ricky0123-vad-web/ricky0123-vad-web.esm.js 436K",
+    "vendor/ricky0123-vad-web/ricky0123-vad-web.iife.js 436K"
+   ],
+   "global": "NOX_ricky0123_vad_web",
+   "totalKB": 872,
+   "main": "vendor/ricky0123-vad-web/ricky0123-vad-web.esm.js"
+  },
+  {
+   "name": "rive",
+   "pkg": "@rive-app/canvas",
+   "version": "2.55.1",
+   "license": "MIT",
+   "dir": "vendor/rive/",
+   "page": "аватар, главная",
+   "example": "import {Rive,RuntimeLoader} from \"./vendor/rive/rive.esm.js\"; RuntimeLoader.setWasmUrl(\"./vendor/rive/rive.wasm\")",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/rive/rive.esm.js 371K",
+    "vendor/rive/rive.iife.js 371K",
+    "vendor/rive/rive.wasm 2301K"
+   ],
+   "global": "NOX_rive",
+   "totalKB": 3043,
+   "main": "vendor/rive/rive.esm.js"
+  },
+  {
+   "name": "rjsf-core",
+   "pkg": "@rjsf/core",
+   "version": "6.11.1",
+   "license": "Apache-2.0",
+   "dir": "vendor/rjsf-core/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/rjsf-core/rjsf-core.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/rjsf-core/rjsf-core.esm.js 389K",
+    "vendor/rjsf-core/rjsf-core.iife.js 389K"
+   ],
+   "global": "NOX_rjsf_core",
+   "totalKB": 779,
+   "main": "vendor/rjsf-core/rjsf-core.esm.js"
+  },
+  {
+   "name": "rss-parser",
+   "pkg": "rss-parser",
+   "version": "3.13.0",
+   "license": "MIT",
+   "dir": "vendor/rss-parser/",
+   "page": "см. IDEAS.md",
+   "example": "",
+   "note": " ESM-сборка не удалась",
+   "status": "FAIL: пусто",
+   "files": []
+  },
+  {
+   "name": "schedule-x-calendar",
+   "pkg": "@schedule-x/calendar",
+   "version": "4.9.1",
+   "license": "MIT",
+   "dir": "vendor/schedule-x-calendar/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/schedule-x-calendar/schedule-x-calendar.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/schedule-x-calendar/schedule-x-calendar.esm.js 185K",
+    "vendor/schedule-x-calendar/schedule-x-calendar.iife.js 185K"
+   ],
+   "global": "NOX_schedule_x_calendar",
+   "totalKB": 370,
+   "main": "vendor/schedule-x-calendar/schedule-x-calendar.esm.js"
+  },
+  {
+   "name": "shaka-player",
+   "pkg": "shaka-player",
+   "version": "5.3.6",
+   "license": "Apache-2.0",
+   "dir": "vendor/shaka-player/",
+   "page": "кино, ТВ (HLS/DASH)",
+   "example": "<script src=\"./vendor/shaka-player/shaka-player.ui.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/shaka-player/controls.css 44K",
+    "vendor/shaka-player/locales.js 92K",
+    "vendor/shaka-player/shaka-player.compiled.js 873K",
+    "vendor/shaka-player/shaka-player.ui.js 1180K"
+   ],
+   "totalKB": 2189,
+   "main": "vendor/shaka-player/locales.js"
+  },
+  {
+   "name": "shoelace",
+   "pkg": "@shoelace-style/shoelace",
+   "version": "2.20.1",
+   "license": "MIT",
+   "dir": "vendor/shoelace/",
+   "page": "все",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/shoelace/cdn/chunks/chunk.22MHKQYS.js",
+    "vendor/shoelace/cdn/chunks/chunk.23EVN5V7.js",
+    "vendor/shoelace/cdn/chunks/chunk.25LFUVTK.js",
+    "vendor/shoelace/cdn/chunks/chunk.25TVLSB6.js",
+    "vendor/shoelace/cdn/chunks/chunk.2LTMPURQ.js",
+    "vendor/shoelace/cdn/chunks/chunk.2N54XHGU.js",
+    "vendor/shoelace/cdn/chunks/chunk.2PEV5IOW.js",
+    "vendor/shoelace/cdn/chunks/chunk.2SU6QBUU.js"
+   ]
+  },
+  {
+   "name": "sigma",
+   "pkg": "sigma",
+   "version": "4.0.6",
+   "license": "MIT",
+   "dir": "vendor/sigma/",
+   "page": "знания (граф)",
+   "example": "import * as M from \"./vendor/sigma/sigma.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/sigma/sigma.esm.js 380K",
+    "vendor/sigma/sigma.iife.js 380K"
+   ],
+   "global": "NOX_sigma",
+   "totalKB": 760,
+   "main": "vendor/sigma/sigma.esm.js"
+  },
+  {
+   "name": "simplex-noise",
+   "pkg": "simplex-noise",
+   "version": "4.0.3",
+   "license": "MIT",
+   "dir": "vendor/simplex-noise/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/simplex-noise/simplex-noise.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/simplex-noise/simplex-noise.esm.js 4K",
+    "vendor/simplex-noise/simplex-noise.iife.js 4K"
+   ],
+   "global": "NOX_simplex_noise",
+   "totalKB": 9,
+   "main": "vendor/simplex-noise/simplex-noise.esm.js"
+  },
+  {
+   "name": "sonner",
+   "pkg": "sonner",
+   "version": "2.0.8",
+   "license": "MIT",
+   "dir": "vendor/sonner/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/sonner/sonner.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/sonner/sonner.esm.js 47K",
+    "vendor/sonner/sonner.iife.js 47K"
+   ],
+   "global": "NOX_sonner",
+   "totalKB": 94,
+   "main": "vendor/sonner/sonner.esm.js"
+  },
+  {
+   "name": "sortablejs",
+   "pkg": "sortablejs",
+   "version": "1.15.7",
+   "license": "MIT",
+   "dir": "vendor/sortablejs/",
+   "page": "задачи, главная",
+   "example": "import * as M from \"./vendor/sortablejs/sortablejs.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/sortablejs/Sortable.min.js 44K",
+    "vendor/sortablejs/sortablejs.esm.js 45K",
+    "vendor/sortablejs/sortablejs.iife.js 46K"
+   ],
+   "global": "NOX_sortablejs",
+   "totalKB": 135,
+   "main": "vendor/sortablejs/sortablejs.esm.js"
+  },
+  {
+   "name": "stellarium-web-engine",
+   "pkg": "git Stellarium/stellarium-web-engine",
+   "license": "AGPL-3.0",
+   "status": "SKIP: нужна сборка emscripten (wasm), лицензия AGPL",
+   "dir": "",
+   "example": "",
+   "page": "атлас",
+   "files": []
+  },
+  {
+   "name": "style-dictionary",
+   "pkg": "style-dictionary",
+   "version": "5.8.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/style-dictionary/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/style-dictionary/style-dictionary.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/style-dictionary/style-dictionary.esm.js 2290K",
+    "vendor/style-dictionary/style-dictionary.iife.js 2290K"
+   ],
+   "global": "NOX_style_dictionary",
+   "totalKB": 4580,
+   "main": "vendor/style-dictionary/style-dictionary.esm.js"
+  },
+  {
+   "name": "suncalc",
+   "pkg": "suncalc",
+   "version": "2.1.4",
+   "license": "см. LICENSE: Copyright (c) 2026, Volodymyr Agafonkin",
+   "dir": "vendor/suncalc/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/suncalc/suncalc.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/suncalc/suncalc.esm.js 8K",
+    "vendor/suncalc/suncalc.iife.js 9K"
+   ],
+   "global": "NOX_suncalc",
+   "totalKB": 17,
+   "main": "vendor/suncalc/suncalc.esm.js"
+  },
+  {
+   "name": "swiper",
+   "pkg": "swiper",
+   "version": "14.4.0",
+   "license": "MIT",
+   "dir": "vendor/swiper/",
+   "page": "кино, новости, фото",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/swiper/swiper-bundle.min.css",
+    "vendor/swiper/swiper-bundle.min.mjs",
+    "vendor/swiper/swiper-bundle.umd.min.js"
+   ]
+  },
+  {
+   "name": "talkinghead",
+   "pkg": "git met4citizen/TalkingHead",
+   "version": "1.8.2",
+   "license": "MIT",
+   "dir": "vendor/talkinghead/",
+   "main": "vendor/talkinghead/modules/talkinghead.mjs",
+   "example": "import {TalkingHead} from \"./vendor/talkinghead/modules/talkinghead.mjs\" (нужен importmap three + three/addons, GLB-аватары в vendor/talkinghead/avatars)",
+   "page": "чат, голос, ТВ",
+   "status": "ok",
+   "totalKB": 71504,
+   "files": []
+  },
+  {
+   "name": "tesseract",
+   "pkg": "tesseract.js",
+   "version": "7.0.0",
+   "license": "Apache-2.0",
+   "dir": "vendor/tesseract/",
+   "page": "фото, документы (OCR)",
+   "example": "<script src=\"./vendor/tesseract/dist/tesseract.esm.min.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/tesseract/dist/tesseract.esm.min.js 62K",
+    "vendor/tesseract/dist/tesseract.esm.min.js.map 181K",
+    "vendor/tesseract/dist/tesseract.min.js 61K",
+    "vendor/tesseract/dist/tesseract.min.js.LICENSE.txt 0K",
+    "vendor/tesseract/dist/tesseract.min.js.map 129K",
+    "vendor/tesseract/dist/worker.min.js 109K",
+    "vendor/tesseract/dist/worker.min.js.LICENSE.txt 0K",
+    "vendor/tesseract/dist/worker.min.js.map 334K"
+   ],
+   "totalKB": 876,
+   "main": "vendor/tesseract/dist/tesseract.esm.min.js"
+  },
+  {
+   "name": "theatre",
+   "pkg": "@theatre/core",
+   "version": "0.7.2",
+   "license": "Apache-2.0",
+   "dir": "vendor/theatre/",
+   "page": "сцена, анимации",
+   "example": "import * as M from \"./vendor/theatre/theatre.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/theatre/theatre.esm.js 105K",
+    "vendor/theatre/theatre.iife.js 105K"
+   ],
+   "global": "NOX_theatre",
+   "totalKB": 209,
+   "main": "vendor/theatre/theatre.esm.js"
+  },
+  {
+   "name": "three",
+   "pkg": "three",
+   "version": "0.187.0",
+   "license": "MIT",
+   "dir": "vendor/three/",
+   "page": "фон, сцена",
+   "example": "import * as THREE from \"./vendor/three/three.module.js\"",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/three/addons/loaders/RGBELoader.js",
+    "vendor/three/addons/loaders/STLLoader.js",
+    "vendor/three/addons/postprocessing/EffectComposer.js",
+    "vendor/three/addons/postprocessing/MaskPass.js",
+    "vendor/three/addons/postprocessing/OutputPass.js",
+    "vendor/three/addons/postprocessing/Pass.js",
+    "vendor/three/addons/postprocessing/RenderPass.js",
+    "vendor/three/addons/postprocessing/ShaderPass.js"
+   ]
+  },
+  {
+   "name": "three-vrm",
+   "pkg": "@pixiv/three-vrm",
+   "version": "3.6.0",
+   "license": "MIT",
+   "dir": "vendor/three-vrm/",
+   "page": "чат, ТВ (аватар)",
+   "example": "importmap: {\"imports\":{\"three\":\"./vendor/three/three.module.js\"}} затем import {VRMLoaderPlugin} from \"./vendor/three-vrm/three-vrm.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/three-vrm/three-vrm.esm.js 159K"
+   ],
+   "totalKB": 159,
+   "main": "vendor/three-vrm/three-vrm.esm.js"
+  },
+  {
+   "name": "tinykeys",
+   "pkg": "tinykeys",
+   "version": "4.0.1",
+   "license": "MIT",
+   "dir": "vendor/tinykeys/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/tinykeys/tinykeys.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/tinykeys/tinykeys.esm.js 2K",
+    "vendor/tinykeys/tinykeys.iife.js 2K"
+   ],
+   "global": "NOX_tinykeys",
+   "totalKB": 4,
+   "main": "vendor/tinykeys/tinykeys.esm.js"
+  },
+  {
+   "name": "tone",
+   "pkg": "tone",
+   "version": "15.1.22",
+   "license": "MIT",
+   "dir": "vendor/tone/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/tone/tone.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/tone/tone.esm.js 343K",
+    "vendor/tone/tone.iife.js 343K"
+   ],
+   "global": "NOX_tone",
+   "totalKB": 687,
+   "main": "vendor/tone/tone.esm.js"
+  },
+  {
+   "name": "transformers-js",
+   "pkg": "@huggingface/transformers",
+   "version": "4.3.2",
+   "license": "Apache-2.0",
+   "dir": "vendor/transformers-js/",
+   "page": "фото, камера",
+   "example": "import {pipeline,env} from \"./vendor/transformers-js/transformers.min.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/transformers-js/dist/ort-wasm-simd-threaded.jsep.mjs 46K",
+    "vendor/transformers-js/dist/transformers.js 1321K",
+    "vendor/transformers-js/dist/transformers.min.js 574K",
+    "vendor/transformers-js/dist/transformers.node.cjs 1345K",
+    "vendor/transformers-js/dist/transformers.node.min.cjs 583K",
+    "vendor/transformers-js/dist/transformers.node.min.mjs 561K",
+    "vendor/transformers-js/dist/transformers.node.mjs 1293K",
+    "vendor/transformers-js/dist/transformers.web.js 1133K",
+    "vendor/transformers-js/dist/transformers.web.min.js 445K"
+   ],
+   "totalKB": 7302,
+   "main": "vendor/transformers-js/dist/transformers.min.js"
+  },
+  {
+   "name": "tremor",
+   "pkg": "@tremor/react",
+   "version": "3.18.7",
+   "license": "Apache 2.0",
+   "dir": "vendor/tremor/",
+   "page": "финансы, дашборды",
+   "example": "import * as M from \"./vendor/tremor/tremor.esm.js\"",
+   "note": "нужен Tailwind CSS для стилей",
+   "status": "ok",
+   "files": [
+    "vendor/tremor/tremor.esm.js 894K",
+    "vendor/tremor/tremor.iife.js 894K"
+   ],
+   "global": "NOX_tremor",
+   "totalKB": 1788,
+   "main": "vendor/tremor/tremor.esm.js"
+  },
+  {
+   "name": "ts-fsrs",
+   "pkg": "ts-fsrs",
+   "version": "5.4.2",
+   "license": "MIT",
+   "dir": "vendor/ts-fsrs/",
+   "page": "обучение (карточки)",
+   "example": "import * as M from \"./vendor/ts-fsrs/ts-fsrs.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/ts-fsrs/ts-fsrs.esm.js 23K",
+    "vendor/ts-fsrs/ts-fsrs.iife.js 24K"
+   ],
+   "global": "NOX_ts_fsrs",
+   "totalKB": 47,
+   "main": "vendor/ts-fsrs/ts-fsrs.esm.js"
+  },
+  {
+   "name": "tsparticles",
+   "pkg": "tsparticles",
+   "version": "4.6.0",
+   "license": "MIT",
+   "dir": "vendor/tsparticles/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/tsparticles/tsparticles.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/tsparticles/package.json 3K",
+    "vendor/tsparticles/tsparticles.bundle.min.js 206K",
+    "vendor/tsparticles/tsparticles.esm.js 232K",
+    "vendor/tsparticles/tsparticles.iife.js 233K"
+   ],
+   "global": "NOX_tsparticles",
+   "totalKB": 674,
+   "main": "vendor/tsparticles/tsparticles.esm.js"
+  },
+  {
+   "name": "tweakpane",
+   "pkg": "tweakpane",
+   "version": "4.0.5",
+   "license": "MIT",
+   "dir": "vendor/tweakpane/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/tweakpane/tweakpane.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/tweakpane/tweakpane.esm.js 148K",
+    "vendor/tweakpane/tweakpane.iife.js 149K"
+   ],
+   "global": "NOX_tweakpane",
+   "totalKB": 297,
+   "main": "vendor/tweakpane/tweakpane.esm.js"
+  },
+  {
+   "name": "typewriter-effect",
+   "pkg": "typewriter-effect",
+   "version": "3.3.0",
+   "license": "MIT",
+   "dir": "vendor/typewriter-effect/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/typewriter-effect/typewriter-effect.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/typewriter-effect/typewriter-effect.esm.js 31K",
+    "vendor/typewriter-effect/typewriter-effect.iife.js 31K"
+   ],
+   "global": "NOX_typewriter_effect",
+   "totalKB": 61,
+   "main": "vendor/typewriter-effect/typewriter-effect.esm.js"
+  },
+  {
+   "name": "uplot",
+   "pkg": "uplot",
+   "version": "1.6.32",
+   "license": "MIT",
+   "dir": "vendor/uplot/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/uplot/uplot.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/uplot/uplot.esm.js 51K",
+    "vendor/uplot/uplot.iife.js 51K"
+   ],
+   "global": "NOX_uplot",
+   "totalKB": 102,
+   "main": "vendor/uplot/uplot.esm.js"
+  },
+  {
+   "name": "uppy-core",
+   "pkg": "@uppy/core",
+   "version": "6.3.2",
+   "license": "MIT",
+   "dir": "vendor/uppy-core/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/uppy-core/uppy-core.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/uppy-core/uppy-core.esm.js 56K",
+    "vendor/uppy-core/uppy-core.iife.js 56K"
+   ],
+   "global": "NOX_uppy_core",
+   "totalKB": 112,
+   "main": "vendor/uppy-core/uppy-core.esm.js"
+  },
+  {
+   "name": "vidstack",
+   "pkg": "vidstack",
+   "version": "1.15.7",
+   "license": "MIT",
+   "dir": "vendor/vidstack/",
+   "page": "кино, видео",
+   "example": "import * as M from \"./vendor/vidstack/vidstack.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/vidstack/player/index.d.ts 0K",
+    "vendor/vidstack/player/layouts/default.d.ts 0K",
+    "vendor/vidstack/player/layouts/index.d.ts 0K",
+    "vendor/vidstack/player/layouts/plyr.d.ts 0K",
+    "vendor/vidstack/player/styles/base.css 3K",
+    "vendor/vidstack/player/styles/default/buffering.css 2K",
+    "vendor/vidstack/player/styles/default/buttons.css 5K",
+    "vendor/vidstack/player/styles/default/captions.css 6K",
+    "vendor/vidstack/player/styles/default/chapter-title.css 1K",
+    "vendor/vidstack/player/styles/default/controls.css 1K",
+    "vendor/vidstack/player/styles/default/gestures.css 0K",
+    "vendor/vidstack/player/styles/default/icons.css 0K"
+   ],
+   "global": "NOX_vidstack",
+   "totalKB": 1057,
+   "main": "vendor/vidstack/vidstack.esm.js"
+  },
+  {
+   "name": "vidstack-react",
+   "pkg": "@vidstack/react",
+   "version": "1.15.7",
+   "license": "MIT",
+   "dir": "vendor/vidstack-react/",
+   "page": "кино (React)",
+   "example": "import * as M from \"./vendor/vidstack-react/vidstack-react.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/vidstack-react/vidstack-react.esm.js 385K",
+    "vendor/vidstack-react/vidstack-react.iife.js 385K"
+   ],
+   "global": "NOX_vidstack_react",
+   "totalKB": 770,
+   "main": "vendor/vidstack-react/vidstack-react.esm.js"
+  },
+  {
+   "name": "vis-timeline",
+   "pkg": "vis-timeline",
+   "version": "8.5.6",
+   "license": "(Apache-2.0 OR MIT)",
+   "dir": "vendor/vis-timeline/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/vis-timeline/vis-timeline.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/vis-timeline/vis-timeline.esm.js 593K",
+    "vendor/vis-timeline/vis-timeline.iife.js 593K"
+   ],
+   "global": "NOX_vis_timeline",
+   "totalKB": 1187,
+   "main": "vendor/vis-timeline/vis-timeline.esm.js"
+  },
+  {
+   "name": "wavesurfer.js",
+   "pkg": "wavesurfer.js",
+   "version": "8.1.1",
+   "license": "BSD-3-Clause",
+   "dir": "vendor/wavesurfer.js/",
+   "page": "музыка, голос",
+   "example": "",
+   "note": "",
+   "status": "уже стоял",
+   "files": [
+    "vendor/wavesurfer.js/dist/base-plugin.js",
+    "vendor/wavesurfer.js/dist/decoder.js",
+    "vendor/wavesurfer.js/dist/define-plugin.js",
+    "vendor/wavesurfer.js/dist/dom.js",
+    "vendor/wavesurfer.js/dist/event-emitter.js",
+    "vendor/wavesurfer.js/dist/fetcher.js",
+    "vendor/wavesurfer.js/dist/fft.js",
+    "vendor/wavesurfer.js/dist/frame-scheduler.js"
+   ]
+  },
+  {
+   "name": "webmidi",
+   "pkg": "webmidi",
+   "version": "3.3.1",
+   "license": "Apache-2.0",
+   "dir": "vendor/webmidi/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/webmidi/webmidi.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/webmidi/webmidi.esm.js 68K",
+    "vendor/webmidi/webmidi.iife.js 68K"
+   ],
+   "global": "NOX_webmidi",
+   "totalKB": 136,
+   "main": "vendor/webmidi/webmidi.esm.js"
+  },
+  {
+   "name": "xterm",
+   "pkg": "@xterm/xterm",
+   "version": "6.0.0",
+   "license": "MIT",
+   "dir": "vendor/xterm/",
+   "page": "терминал",
+   "example": "<script src=\"./vendor/xterm/lib/xterm.js\"></script>",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/xterm/css/xterm.css 7K",
+    "vendor/xterm/lib/xterm.js 477K",
+    "vendor/xterm/lib/xterm.js.map 1879K",
+    "vendor/xterm/lib/xterm.mjs 337K",
+    "vendor/xterm/lib/xterm.mjs.map 1651K"
+   ],
+   "totalKB": 4352,
+   "main": "vendor/xterm/lib/xterm.js"
+  },
+  {
+   "name": "xyflow",
+   "pkg": "@xyflow/react",
+   "version": "13.0.3",
+   "license": "MIT",
+   "dir": "vendor/xyflow/",
+   "page": "карта мышления, конструктор",
+   "example": "import * as M from \"./vendor/xyflow/xyflow.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/xyflow/xyflow.css 18K",
+    "vendor/xyflow/xyflow.esm.js 273K",
+    "vendor/xyflow/xyflow.iife.js 273K"
+   ],
+   "global": "NOX_xyflow",
+   "totalKB": 563,
+   "main": "vendor/xyflow/xyflow.esm.js"
+  },
+  {
+   "name": "y-webrtc",
+   "pkg": "y-webrtc",
+   "version": "10.3.0",
+   "license": "MIT",
+   "dir": "vendor/y-webrtc/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/y-webrtc/y-webrtc.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/y-webrtc/y-webrtc.esm.js 209K",
+    "vendor/y-webrtc/y-webrtc.iife.js 209K"
+   ],
+   "global": "NOX_y_webrtc",
+   "totalKB": 418,
+   "main": "vendor/y-webrtc/y-webrtc.esm.js"
+  },
+  {
+   "name": "yjs",
+   "pkg": "yjs",
+   "version": "13.6.33",
+   "license": "MIT",
+   "dir": "vendor/yjs/",
+   "page": "доска, совместная работа",
+   "example": "import * as M from \"./vendor/yjs/yjs.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/yjs/yjs.esm.js 94K",
+    "vendor/yjs/yjs.iife.js 94K"
+   ],
+   "global": "NOX_yjs",
+   "totalKB": 188,
+   "main": "vendor/yjs/yjs.esm.js"
+  },
+  {
+   "name": "zustand",
+   "pkg": "zustand",
+   "version": "5.1.0",
+   "license": "MIT",
+   "dir": "vendor/zustand/",
+   "page": "см. IDEAS.md",
+   "example": "import * as M from \"./vendor/zustand/zustand.esm.js\"",
+   "note": "",
+   "status": "ok",
+   "files": [
+    "vendor/zustand/zustand.esm.js 9K",
+    "vendor/zustand/zustand.iife.js 9K"
+   ],
+   "global": "NOX_zustand",
+   "totalKB": 18,
+   "main": "vendor/zustand/zustand.esm.js"
+  },
+  {
+   "name": "arwes-text",
+   "pkg": "@arwes/text",
+   "version": "1.0.0-next.25020502",
+   "license": "MIT",
+   "dir": "vendor/arwes-text/",
+   "status": "ok",
+   "main": "vendor/arwes-text/arwes-text.esm.js",
+   "files": [
+    "vendor/arwes-text/arwes-text.esm.js",
+    "vendor/arwes-text/arwes-text.iife.js"
+   ],
+   "page": "HUD",
+   "example": "",
+   "note": "собран esbuild 27.11"
+  }
+ ]
+}
