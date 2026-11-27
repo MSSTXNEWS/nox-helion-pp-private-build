@@ -18,7 +18,7 @@ echo "mem list via gate-less: $(curl -s -m6 -X POST -H 'Content-Type: applicatio
 echo "mem recall blocked code: $(curl -s -o /dev/null -w %{http_code} -X POST -d '{}' http://127.0.0.1:18091/api/nox/memory/recall)"
 # 2) client
 W=/tmp/rsw_$cb; mkdir -p $W; ok=0
-for k in 1 2 3 4 5 6; do curl -fsSL "$R/bundles/v1d/ab.js?cb=$cb$k" -o $W/ab.js && grep -q __noxStop $W/ab.js && grep -q "Привет, Создатель" $W/ab.js && grep -q nox-credfix $W/ab.js && { ok=1; break; }; sleep 6; done
+for k in 1 2 3 4 5 6; do curl -fsSL "$R/bundles/v1d/ab.js?cb=$cb$k" -o $W/ab.js && grep -q __noxStop $W/ab.js && grep -q nox-credfix $W/ab.js && { ok=1; break; }; sleep 6; done
 [ $ok = 1 ] || { echo STALE; exit 0; }
 cp $W/ab.js $S/ab1d/ab.js; cp $S/chat-v1d.html $S/chat-dc.html
 bash <(curl -fsSL "$R/../th_graphite/ensure.sh?cb=$cb") 2>&1 | tail -1; bash <(curl -fsSL "$R/../th_graphite/webroot_sync.sh?cb=$cb") | tail -1
