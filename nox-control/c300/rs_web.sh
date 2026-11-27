@@ -21,6 +21,6 @@ W=/tmp/rsw_$cb; mkdir -p $W; ok=0
 for k in 1 2 3 4 5 6; do curl -fsSL "$R/bundles/v1d/ab.js?cb=$cb$k" -o $W/ab.js && grep -q __noxStop $W/ab.js && grep -q nox-credfix $W/ab.js && { ok=1; break; }; sleep 6; done
 [ $ok = 1 ] || { echo STALE; exit 0; }
 cp $W/ab.js $S/ab1d/ab.js; cp $S/chat-v1d.html $S/chat-dc.html
-bash <(curl -fsSL "$R/th_graphite/ensure.sh?cb=$cb") 2>&1 | tail -1; bash <(curl -fsSL "$R/th_graphite/webroot_sync.sh?cb=$cb") | tail -1
+bash <(curl -fsSL "$R/bundles/th_graphite/ensure.sh?cb=$cb") 2>&1 | tail -1; bash <(curl -fsSL "$R/bundles/th_graphite/webroot_sync.sh?cb=$cb") | tail -1
 for u in chat-dc.html chat-v1d.html ab1d/ab.js; do echo "$u $(curl -s -o /dev/null -w '%{http_code} %{size_download}' http://127.0.0.1:18091/web/$u)"; done
 echo "served has noxStop: $(curl -s http://127.0.0.1:18091/web/ab1d/ab.js | grep -c __noxStop)"
