@@ -2,8 +2,14 @@ echo "K1: cx_gpu2"
 export RUNNER_TRACKING_ID=""
 N=/workspace/nox; A=$N/agent/autotrain; ts=$(date +%s)
 B=$A/donor_hybrid.cmd.liska_ncmoe22; G=$A/donor_hybrid.cmd.gpu_ncmoe0
-python3 -c "import re,sys;s=open(sys.argv[1]).read();n=re.subn(r\"(--n-cpu-moe|-ncmoe)([ =\\t\"\x27\\xa0]+)[0-9]+\",lambda m:m.group(1)+m.group(2)+\"0\",s);open(sys.argv[2],\"w\").write(n[0]);print(\"subs\",n[1])" $B $G
-grep -q -- "--n-cpu-moe 0" $G || { echo "NO_SUBST abort"; grep -c "cpu-moe" $B; echo END; exit 0; }
+python3 - "$B" "$G" <<'PY'
+import re,sys
+s=open(sys.argv[1]).read()
+n=re.subn(r"(--n-cpu-moe|-ncmoe)(\W+)(\d+)",lambda m:m.group(1)+m.group(2)+"0",s)
+open(sys.argv[2],"w").write(n[0]); print("subs",n[1])
+PY
+grep -o -- "--n-cpu-moe.\{0,4\}" $B | od -c | head -2
+grep -qE -- "--n-cpu-moe\W+0\b" $G || { echo "NO_SUBST abort"; grep -c "cpu-moe" $B; echo END; exit 0; }
 echo "variant: $(tr '\n' ' ' < $G | grep -oE -- '--n-cpu-moe [0-9]+|--parallel [0-9]+|-ngl [0-9]+|--n-gpu-layers [0-9]+' | tr '\n' ' ')"
 echo "vram_before $(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader)"
 bench(){ python3 - <<'PY'
