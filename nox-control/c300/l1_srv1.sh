@@ -1,0 +1,20 @@
+echo "K1: l1_srv1"
+S=/workspace/nox/state
+echo "disk_free_gb=$(df -BG --output=avail /workspace | tail -1 | tr -dc 0-9)"
+B=$(ls -d /workspace/nox/backup*/nox-backup-* 2>/dev/null); echo "backups=$(echo "$B" | grep -c .)"
+L=$(ls -dt $B 2>/dev/null | head -1); [ -n "$L" ] && echo "last_backup_age_h=$(( ( $(date +%s) - $(stat -c %Y $L) ) / 3600 ))"
+echo "load1=$(cut -d' ' -f1 /proc/loadavg)"
+J=$(ls -dt $S/gw_journal/* 2>/dev/null | head -1)
+[ -n "$J" ] && echo "gw_errors_1h=$(find $S/gw_journal -type f -mmin -60 -print0 | xargs -0 grep -ci error 2>/dev/null | awk -F: '{s+=$NF}END{print s+0}')"
+echo "stop_flag=$([ -e $S/STOP ] && echo yes || echo no)"
+echo "hf_code=$(curl -s -m8 -o /dev/null -w %{http_code} https://huggingface.co/api/models/bert-base-uncased)"
+echo "== 8105"
+P=$(pgrep -f -- '--port 8105' | head -1); echo "pid_alive=$([ -n "$P" ] && echo yes || echo no)"
+[ -n "$P" ] && echo "proc_state=$(awk '{print $3}' /proc/$P/stat)"
+echo "listen_8105=$(ss -ltn | grep -c ':8105 ')"
+echo "health_code=$(curl -s -m3 -o /dev/null -w %{http_code} localhost:8105/health)"
+echo "oom_kills=$(dmesg 2>/dev/null | grep -ci 'out of memory')"
+echo "owner_active_age_s=$(( $(date +%s) - $(stat -c %Y $S/orch/OWNER_ACTIVE) ))"
+echo "== slots 8104"; curl -s -m4 localhost:8104/slots | python3 -c "import json,sys;print([(x['id'],int(x['is_processing'])) for x in json.load(sys.stdin)])"
+echo "== id_slot refs (file:count)"
+cd /workspace/nox; grep -rlE "127.0.0.1:8104|:8104" --include=*.py --include=*.sh ops svc agent stewards brain web/pkg 2>/dev/null | grep -v -E "\.bak|/data/|chat_core" | while read f; do echo "$f slot=$(grep -c id_slot $f) refs=$(grep -c 8104 $f)"; done | head -40
