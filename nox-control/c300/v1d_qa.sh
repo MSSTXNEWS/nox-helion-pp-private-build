@@ -10,7 +10,7 @@ with sync_playwright() as p:
     pg.goto('http://127.0.0.1:18091/web/chat-v1d.html',wait_until='load');pg.evaluate("localStorage.clear()");pg.reload();pg.wait_for_timeout(3000)
     print('sun',pg.evaluate("document.querySelector('.sun')&&document.querySelector('.sun').dataset.s"),'footer',pg.evaluate("document.querySelector('footer')&&document.querySelector('footer').innerText.slice(0,80)"))
     # обычный ход
-    t0=time.time();pg.fill('textarea','Привет, коротко: как дела?');pg.keyboard.press('Enter')
+    t0=time.time();pg.fill('textarea:not([aria-hidden])','Привет, коротко: как дела?');pg.keyboard.press('Enter')
     seen=set()
     for i in range(120):
         s=pg.evaluate("document.querySelector('.sun')&&document.querySelector('.sun').dataset.s");seen.add(s)
@@ -20,8 +20,11 @@ with sync_playwright() as p:
     print('answer',pg.evaluate("(()=>{const e=[...document.querySelectorAll('.nox-body')].pop();return e?e.innerText.slice(0,160):'NONE'})()"))
     print('meta',pg.evaluate("(()=>{const e=[...document.querySelectorAll('.nox-msg')].pop();return e?e.innerText.split('\\n').slice(-3).join(' | ').slice(0,200):''})()"))
     print('tags',pg.evaluate("[...document.querySelectorAll('[aria-label=\"Быстрые ответы\"] button')].map(e=>e.textContent).slice(0,5)"))
+    pg.fill('textarea:not([aria-hidden])','расскажи мне про');pg.wait_for_timeout(2500)
+    print('draft',pg.evaluate("(()=>{const e=[...document.querySelectorAll('kbd')].find(k=>k.textContent==='Tab');return e?e.parentElement.innerText.slice(0,120):'(пусто, честно)'})()"))
+    pg.fill('textarea:not([aria-hidden])','/');pg.wait_for_timeout(800);print('slash palette',pg.evaluate("document.querySelectorAll('[cmdk-item]').length"));pg.keyboard.press('Escape')
     # рисование
-    t0=time.time();pg.fill('textarea','нарисуй простой красный круг на белом фоне');pg.keyboard.press('Enter')
+    t0=time.time();pg.fill('textarea:not([aria-hidden])','нарисуй простой красный круг на белом фоне');pg.keyboard.press('Enter')
     ok=False
     for i in range(180):
         if pg.evaluate("!!document.querySelector('figure img')"):ok=True;break
