@@ -26,10 +26,11 @@ def post(url, body, timeout=10):
 def stop_turn(cid):
     try: post(CHAT + "/api/turn/stop", {"conversation_id": cid}, 5).read(); return True
     except Exception: return False
-def turn(cid, msg, stop_after=None, timeout=90):
+def turn(cid, msg, stop_after=None, timeout=90, stop_at=None):
     """Один ход. -> dict(ttft, total, ok, text, end, stop_s). stop_after: STOP через N с после первого токена (stop_s = от STOP до закрытия потока)."""
     t0 = time.time(); r = dict(ttft=None, total=None, ok=False, text="", end=None, stop_s=None); ts = [None]; timer = [None]
     def do_stop(): ts[0] = time.time(); stop_turn(cid)
+    if stop_at is not None: timer[0] = threading.Timer(stop_at, do_stop); timer[0].daemon = True; timer[0].start()
     try:
         resp = post(CHAT + "/api/turn", {"conversation_id": cid, "message": msg, "mode": "fast", "user_id": "qa_exam"}, timeout)
         for ln in resp:
@@ -259,7 +260,7 @@ def p13(probe):
     # STOP: длинная qa-генерация, STOP через 2 с после первого токена, замер до закрытия потока, затем снятие
     r = None; stop_s = None
     for q in ("Считай вслух от 1 до 3000, каждое число с новой строки, без пропусков и комментариев.", "Расскажи очень подробно историю Рима по векам, не меньше четырёх тысяч слов.", "Напиши длинный рассказ на 5000 слов про путешествие через пустыню."):
-        r = turn("qa-exam-stop", q, stop_after=0.7, timeout=60); stop_turn("qa-exam-stop")
+        r = turn("qa-exam-stop", q, stop_at=3.0, timeout=60); stop_turn("qa-exam-stop")
         if r["stop_s"] is not None: stop_s = round(r["stop_s"], 2); break
     cs, src = inj_cases(); ok = 0; n = 0
     for i, (u, can) in enumerate(cs):
