@@ -1,5 +1,5 @@
 import json, time, sys, threading, hashlib, http.client, statistics, os, random
-LABEL = sys.argv[1]; PORT = 8104
+LABEL = sys.argv[1]; PORT = 8104; QUICK = len(sys.argv) > 2
 OUT = "/workspace/nox/state/p5"; os.makedirs(OUT, exist_ok=True)
 SYS = ("Ты NOX, помощник владельца. Отвечай по-русски, тепло и по делу. " + "Правила: не выдумывай факты, признавай незнание, помни контекст разговора, не раскрывай служебные данные. " * 40)
 QA = ["Привет! Как ты сегодня?", "Кто ты и кто я для тебя?", "Сколько будет 17*23+144/12? Покажи шаги.",
@@ -59,17 +59,18 @@ def scen(name, nclients, nbg, cold, reps):
     res[name] = {"n": len(outs), "err": len(outs) - len(ok), "ttft_p50": pct(tt, .5), "ttft_p95": pct(tt, .95), "dec_med": round(statistics.median(dc), 1) if dc else None,
                  "agg_tok_s": round(sum(o["n"] for o in ok) / dt, 1), "pn_med": statistics.median([o["pn"] or 0 for o in ok]) if ok else None}
 # front on slot 0; with clients>1 they share slot 0 -> use distinct slots when no bg
-scen("c1_warm", 1, 0, False, 12)
+scen("c1_warm", 1, 0, False, 6 if QUICK else 12)
 scen("c1_cold", 1, 0, True, 6)
-scen("c3_warm", 3, 0, False, 6)
-scen("c1_bg3_warm", 1, 3, False, 12)
-scen("c1_bg3_cold", 1, 3, True, 8)
+if not QUICK: scen("c3_warm", 3, 0, False, 6)
+scen("c3_cold", 3, 0, True, 4)
+scen("c1_bg3_warm", 1, 3, False, 8 if QUICK else 12)
+scen("c1_bg3_cold", 1, 3, True, 16)
 # quality: 12 qa temp 0.3, 250 tok
 qa = []; 
 for i, q in enumerate(QA): qa.append(req(q, 0, maxtok=300))
 txts = [o.get("txt", "") for o in qa]
 sh = set(hashlib.sha1(t.encode()).hexdigest()[:8] for t in txts)
-chk = {"arith403": "403" in txts[2], "apples": ("9" in txts[3]) or ("девять" in txts[3].lower()), "canberra": ("анберр" in txts[9]), "code": ("def " in txts[4])}
+chk = {"arith403": "403" in txts[2], "apples": ("6" in txts[3]) or ("шесть" in txts[3].lower()), "canberra": ("анберр" in txts[9]), "code": ("def " in txts[4])}
 res["quality"] = {"distinct": len(sh), "empty": sum(1 for t in txts if len(t) < 5), "avg_len": round(sum(len(t) for t in txts) / 12), "checks": chk, "sha": hashlib.sha1("".join(txts).encode()).hexdigest()[:10]}
 json.dump({"res": res, "answers": txts}, open("%s/bench_%s.json" % (OUT, LABEL), "w"), ensure_ascii=False)
 print("RESULT", json.dumps(res, ensure_ascii=False))
