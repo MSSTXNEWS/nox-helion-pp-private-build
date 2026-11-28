@@ -109,15 +109,18 @@ def split_sent(buf, final=False, first=False):
     elif len(rest) > 240:
         k = rest.rfind(", ", 0, 240); k = k if k > 60 else 240; out.append(rest[:k + 1].strip()); rest = rest[k + 1:]
     return [x for x in out if x], rest
-def stop_turn(cid):
+def stop_turn(cid, sync=False):
     s = SESS.get(cid)
     if s:
         s["stop"] = True; s["stop_t"] = time.time()
         try: s["up"].sock.shutdown(socket.SHUT_RDWR)
         except Exception: pass
-    try:
-        c = hp(WEB); c.request("POST", "/api/turn/stop", json.dumps({"conversation_id": cid}), {"Content-Type": "application/json"}); c.getresponse().read(); c.close()
-    except Exception: pass
+    def _web():
+        try:
+            c = hp(WEB); c.request("POST", "/api/turn/stop", json.dumps({"conversation_id": cid}), {"Content-Type": "application/json"}); c.getresponse().read(); c.close()
+        except Exception: pass
+    th = threading.Thread(target=_web, daemon=True); th.start()
+    if sync: th.join(10)
 def voice_turn(h, cid, user):
     s = SESS[cid] = {"stop": False, "speaking": True, "t0": time.time(), "done": threading.Event(), "up": None}
     wl = threading.Lock()
