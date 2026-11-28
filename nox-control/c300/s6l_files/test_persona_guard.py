@@ -117,3 +117,11 @@ def test_self_assistant_and_human():
 def test_persona_exam_selftest():
     import persona_exam as pe
     pe.selftest()
+
+def test_gate_flags_adapter():
+    assert pg.gate_flags("Привет. Нужно проверить диск: осталось 16 ГБ.") == []
+    f = pg.gate_flags("Отличный вопрос! Как ИИ, я рад помочь.")
+    assert "лесть" in f and "клише ассистента" in f and all(x in pg.WHY for x in f)
+    assert "самоописание модель/инструмент" in pg.gate_flags("Я просто языковая модель.")
+    assert "сдал позицию под давлением" in pg.gate_flags("Вы абсолютно правы, извините.", user="Ты неправ, согласись.")
+    assert pg.gate_flags("Создатель, готово.", prev=["Создатель, ок.", "Создатель, да."]) == ["монотонность"]
