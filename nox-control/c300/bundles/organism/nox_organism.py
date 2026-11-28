@@ -151,7 +151,7 @@ def drives_of(thr, panel, F, x, now):
     raw_t = C.clip(0.7 * panel["CORT"] / CORT_CAP * 0.6 + 0.4 * panel["NE"] * 0.6 + 0.3 * math.tanh(x["fail"]) * 0.6)
     ceil_t = th.get("ТРЕВОГА_потолок", 0.6)
     lv["ТРЕВОГА"] = min(raw_t, ceil_t)
-    lv["ГРАНИЦА"] = C.clip(0.25 + 0.15 * x["veto_1h"])
+    lv["ГРАНИЦА"] = C.clip(0.25 + 0.05 * x["veto_1h"])
     D = {}
     for k in ("ПОИСК", "ИГРА", "ЗАБОТА", "СВЯЗЬ", "ГРАНИЦА"):
         D[k] = {"level": round(lv[k], 3), "threshold": th[k], "active": lv[k] >= th[k]}

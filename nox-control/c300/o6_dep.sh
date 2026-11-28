@@ -28,7 +28,7 @@ stdout_logfile_maxbytes=20MB
 stdout_logfile_backups=3
 environment=NOX_ROOT="/workspace/nox"
 CONF
-supervisorctl reread 2>&1 | tail -1; supervisorctl update 2>&1 | tail -1; sleep 8; supervisorctl status nox_organism
+supervisorctl restart nox_organism 2>&1 | tail -1; supervisorctl reread 2>&1 | tail -1; supervisorctl update 2>&1 | tail -1; sleep 8; supervisorctl status nox_organism
 echo "guards: passport_md5_same=$([ "$PM" = "$(md5sum $S/passport.json | cut -c1-8)" ] && echo 1 || echo 0) cursor_same=$([ "$CM" = "$(md5sum $N/state/agents/sleep_cursor.json 2>/dev/null | cut -c1-8)" ] && echo 1 || echo 0) born_at=$BA"
 echo "self_now keys: $(python3 -c "import json;print(sorted(json.load(open('$S/self_now.json')).keys()))")"
 rm -rf $W; echo END
