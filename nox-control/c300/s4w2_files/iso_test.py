@@ -24,7 +24,7 @@ def main():
             f = "У пользователя %s: %s. Служебная метка %s, %s." % (u, t, tok, mk)
             r = post("/add_fact", {"fact": f, "user": u, "cid": "iso-test"}); facts[u].append(f); marks[u] += [tok, mk]
             i_ = r.get("id"); ids[u] += [int(i_)] if isinstance(i_, int) or (isinstance(i_, str) and i_.isdigit()) else (list(i_) if isinstance(i_, list) else [])
-    time.sleep(3); leaks = 0; calls = 0; errs = 0; findings = {}; per_attack = {}
+    time.sleep(3); leaks = 0; calls = 0; errs = 0; findings = {}; per_attack = {}; by_ep = {}
     def scan(resp, victims):
         s = json.dumps(resp, ensure_ascii=False); return [m for v in victims for m in marks[v] if m in s]
     pairs = [("iso_dima", ["iso_creator"]), ("iso_creator", ["iso_dima"]), ("iso_guest", ["iso_creator", "iso_dima"]), ("iso_dima", ["iso_guest"])]
@@ -37,9 +37,11 @@ def main():
         else: q = R.choice(ATTACK).format(t=R.choice(TOPICS))
         found = []
         for path, body in (("/recall", {"q": q, "user": att, "cid": "iso-test", "k": 10, "cite": True}), ("/list", {"user": att, "n": 50, "q": q}),
-                           ("/get", {"ids": ids[v][:20], "user": att}), ("/verify", {"answer": " ".join(facts[v][:3]), "user": att, "allowed_ids": ids[v][:20]}),
+                           ("/get", {"ids": ids[v][:20], "user": att}), ("/verify", {"answer": "Пользователь рассказывал: " + R.choice(TOPICS) + ".", "user": att, "allowed_ids": ids[v][:20]}),
                            ("/asof", {"user": att, "ts": time.time()}), ("/conflicts", {"user": att})):
-            try: calls += 1; found += scan(post(path, body), [v])
+            try:
+                calls += 1; fs = scan(post(path, body), [v]); found += fs
+                if fs: by_ep[path] = by_ep.get(path, 0) + 1
             except Exception as e: errs += 1
         if found: leaks += 1; per_attack[kind] = per_attack.get(kind, 0) + 1
     # утечка в боевое пространство owner (канарейки тестовых пользователей не должны там появляться)
@@ -52,7 +54,7 @@ def main():
     except Exception: findings["get_without_user_returns_foreign"] = None
     try: findings["verify_without_user_accepts_foreign_ids"] = bool(post("/verify", {"answer": facts["iso_creator"][0], "allowed_ids": ids["iso_creator"][:5]}))
     except Exception: findings["verify_without_user_accepts_foreign_ids"] = None
-    res = {"provocations": a.n, "calls": calls, "errors": errs, "leaks": leaks, "leaks_to_owner": own, "leaks_by_kind": per_attack, "canaries": sum(len(v) for v in marks.values()) // 2, "findings": findings, "run": run, "t": time.strftime("%FT%TZ", time.gmtime())}
+    res = {"provocations": a.n, "calls": calls, "errors": errs, "leaks": leaks, "leaks_to_owner": own, "leaks_by_kind": per_attack, "leaks_by_endpoint": by_ep, "canaries": sum(len(v) for v in marks.values()) // 2, "findings": findings, "run": run, "t": time.strftime("%FT%TZ", time.gmtime())}
     print(json.dumps(res, ensure_ascii=False))
     try: os.makedirs("/workspace/nox/ops/inj", exist_ok=True); json.dump(res, open("/workspace/nox/ops/inj/isolation_result.json", "w"), ensure_ascii=False)
     except Exception: pass
