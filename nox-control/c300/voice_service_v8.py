@@ -200,7 +200,7 @@ class H(BaseHTTPRequestHandler):
             cid = self.q("cid", "x"); v = vad_for(cid); t_in = time.time(); pr, run, eou = v.feed(raw); sp = run >= 1
             s = SESS.get(cid); barge = bool(run >= 3 and s and s.get("speaking") and not s.get("stop")); o = {"speech": sp, "p": round(pr, 3), "barge": False, "eou": eou, "vad": v.kind}
             if barge:
-                stop_turn(cid); s["done"].wait(1.5); pcm, sr = FIX.get(ACK) or tts_pcm(ACK, pad=False)
+                stop_turn(cid); s["done"].wait(0.25); pcm, sr = FIX.get(ACK) or tts_pcm(ACK, pad=False)
                 o.update({"barge": True, "cancel_ms": int((time.time() - t_in) * 1000), "ack": ACK, "ack_sr": sr, "ack_pcm_b64": base64.b64encode(pcm).decode()})
             return self._j(200, o)
         if p == "/voice/stop":
