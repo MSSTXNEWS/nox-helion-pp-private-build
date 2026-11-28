@@ -82,6 +82,7 @@ v2/chunk-BYKKBDFU.js
 v2/chunk-C4S3NMLA.js
 v2/chunk-C4TOJDCM.js
 v2/chunk-DG7ZX5K5.js
+v2/chunk-GOFIDLOL.js
 v2/chunk-IFRA24PC.js
 v2/chunk-IKBRAUHY.js
 v2/chunk-JIGQVW6N.js
@@ -114,7 +115,6 @@ v2/finance.js
 v2/forge.css
 v2/forge.js
 v2/g01-status.css
-root/g01-status.html
 v2/g01-status.js
 v2/g02-owner.css
 v2/g02-owner.js
@@ -141,7 +141,6 @@ root/home9.html
 v2/home9.js
 v2/hubs.css
 v2/hubs.js
-root/index-prev.html
 root/index.html
 v2/kit-motion.js
 v2/kit.css
