@@ -9,10 +9,10 @@ for s, k in rows:
     ch = (y - x) / x * 100 if x else 0; gain[(s, k)] = ch; print("CMP %s %s base=%s new=%s %+.0f%%" % (s, k, x, y, ch))
 q = n["quality"]; qb = b["quality"]
 qok = q["distinct"] >= 11 and q["empty"] == 0 and q["checks"]["arith403"] and q["checks"]["canberra"] and q["checks"]["code"] and 0.6 * qb["avg_len"] <= q["avg_len"] <= 1.5 * qb["avg_len"]
-errs = sum((n.get(s) or {}).get("err", 0) for s in n if s != "label" and s != "quality")
+errs = sum((n.get(s) or {}).get("err", 0) for s in n if isinstance(n[s], dict) and s != "quality")
 print("QUALITY", q, "ok", qok, "errs", errs)
-better = gain.get(("c1_bg3_cold", "ttft_p95"), 0) <= -10 or gain.get(("c1_bg3_warm", "dec_med"), 0) >= 10 or gain.get(("c1_warm", "dec_med"), 0) >= 10
-worse = any(gain.get(k, 0) >= 10 for k in [("c1_bg3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50")]) or any(gain.get(k, 0) <= -10 for k in [("c1_warm", "dec_med"), ("c1_bg3_warm", "dec_med")])
+better = any(gain.get(k, 0) <= -10 for k in [("c1_cold", "ttft_p95"), ("c3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50")]) or gain.get(("c1_bg3_warm", "dec_med"), 0) >= 10
+worse = any(gain.get(k, 0) >= 10 for k in [("c1_cold", "ttft_p95"), ("c3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50")]) or gain.get(("c1_bg3_warm", "dec_med"), 0) <= -10
 if "c1_bg9_cold" in n:   # e5: ≤1 с p95 у фронта при 9 фоновых и суммарный ток/с вырос
     f95 = g(n, "c1_bg9_cold", "ttft_p95"); tb = g(b, "c1_bg9_cold", "total_tok_s") or g(b, "c1_bg3_cold", "total_tok_s"); tn = g(n, "c1_bg9_cold", "total_tok_s")
     ok9 = f95 is not None and f95 <= 1.0 and tn and tb and tn > tb
