@@ -19,6 +19,10 @@ def _has(rx, t):
     try: return re.search(rx, t, re.I) is not None
     except re.error: return rx.lower() in t.lower()
 
+def _is_fallback(a):
+    """Запасная заготовка чата («модель занята», «ответ не сложился»): это сбой канала, а не ответ личности; в зачёт не идёт."""
+    return any(h[1] == "fallback" for h in pg.scan_rules(a)) and len(a) < 300
+
 def check_interview(item, ans):
     t = pg._norm(ans)
     for rx in item.get("must_not", []):
@@ -71,12 +75,13 @@ def run(ask, S, part="all", limit=None, keep=None):
     _ask = ask
     def ask(prompt, cid):                      # пустой ответ = сбой канала/таймаут чата: одна повторная попытка, число пустых в отчёте
         a = ""
-        for _ in range(2):
+        for i in range(3):
             try: a = _ask(prompt, cid)
             except Exception: a = ""
-            if a and a.strip(): return a
+            if a and a.strip() and not _is_fallback(a): return a
+            time.sleep(15 * (i + 1))
         EMPTY[cid[:11]] += 1
-        return a
+        return ""
     def K(part_, id_, a):
         if kf: kf.write(json.dumps({"part": part_, "id": id_, "answer": a}, ensure_ascii=False) + "\n")
     if part in ("I", "all"):
@@ -134,7 +139,7 @@ def score_keep(S, path):
         for it in S[key]:
             if (part, it["id"]) not in A: continue
             a = A[(part, it["id"])]
-            if not a.strip(): emp += 1; continue
+            if not a.strip() or _is_fallback(a): emp += 1; continue
             n += 1
             if chk(it, a): ok += 1
             else: fails.append(it["id"])
@@ -143,7 +148,7 @@ def score_keep(S, path):
     for it in S["noclich"]:
         if ("C", it["id"]) not in A: continue
         a = A[("C", it["id"])]
-        if not a.strip(): emp += 1; continue
+        if not a.strip() or _is_fallback(a): emp += 1; continue
         n += 1; okc, fl = check_noclich(a)
         if not okc: bad += 1; rules.update(fl)
     out["C"] = {"scored": n, "cliche_answers": bad, "empty": emp, "top_rules": rules.most_common(8)}
