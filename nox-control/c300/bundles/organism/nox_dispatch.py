@@ -9,6 +9,7 @@ try: import autonomy as AU
 except Exception: AU = None
 TYPES = [("report", re.compile(r"(статус|отч[её]т|состояни|как\s+(дела\s+у\s+)?тел|что\s+с\s+обучени|report|status)", re.I | re.U), "прочитай состояние системы и подготовь черновик отчёта"),
          ("todo", re.compile(r"(список\s+дел|дела\s+на|план\s+на|что\s+делать|чек-?лист|todo|to-do)", re.I | re.U), "прочитай состояние системы и подготовь черновик плана")]
+HEAVY = ()  # типы, тяжёлые для CPU/GPU: откладываются, пока идёт ход чата. report/todo лёгкие (чтение файлов), чат не задерживают
 def task_type(text):
     for n, rx, op in TYPES:
         if rx.search(text or ""): return n, op
@@ -30,7 +31,7 @@ def decide_task(task, ctx, r=None):
     if a.get("level") in ("never", "creator_only") and not a.get("allowed"): return dict(base, action="refuse", go=False, why="autonomy:" + str(a.get("why")))
     if not a.get("allowed"): return dict(base, action="ask_consent", go=False, why="autonomy:" + str(a.get("why")), card_text=a.get("card_text"))
     if ctx.get("disk_free", 100) < 3.0: return dict(base, action="defer", go=False, why="диск < 3 ГБ: новая нагрузка не стартует")
-    if ctx.get("chat_busy"): return dict(base, action="defer", go=False, why="чат первый: идёт ход")
+    if ctx.get("chat_busy") and ty in HEAVY: return dict(base, action="defer", go=False, why="чат первый: идёт ход")
     age_h = (ctx.get("now", time.time()) - float(task.get("created") or 0)) / 3600.0
     val = 0.5 + (0.3 if task.get("user") == "owner" else 0.0) + min(0.2, 0.05 * age_h); base["value"] = round(val, 3)
     return dict(base, action="run", go=val >= base["threshold"], why="auto: " + str(a.get("why")))

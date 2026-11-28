@@ -6,6 +6,7 @@ for f in $F; do curl -fsS -m 30 "$B/$f.py?cb=$cb" -o $W/$f.py || { echo "FETCH_F
 cp $M/autonomy.py $W/autonomy.py
 R=$(cd $W && python3 -W ignore -m unittest test_nox_hands test_nox_predator test_nox_organism 2>&1 | tail -45); echo "$R" | cut -c1-200; echo "$R" | grep -q "^OK$" || { echo "TESTS_FAIL abort"; echo END; exit 0; }
 echo "before: tasks_queued=$(grep -l '"status": "queued"' $T/*.json 2>/dev/null | wc -l) receipts=$(ls $N/state/receipts | wc -l) bus_events=$(python3 -c "import sqlite3;print(sqlite3.connect('file:$N/state/bus/events.db?mode=ro',uri=True).execute('select max(seq) from events').fetchone()[0])") disk=$(df -BM /workspace|tail -1|awk '{print $4}')"
+echo "chat_busy src:"; grep -n -A8 "def chat_busy" $N/agent/nox_ops/common.py | cut -c1-160
 for f in nox_bus nox_dispatch nox_board nox_hands test_nox_hands; do cp $M/$f.py $M/$f.py.bak_o2 2>/dev/null; cp $W/$f.py $M/$f.py; done
 D=/etc/supervisor/conf.d
 [ -f $D/nox_hands.conf ] || cat > $D/nox_hands.conf <<'CONF'
@@ -24,7 +25,7 @@ stdout_logfile_maxbytes=20MB
 stdout_logfile_backups=3
 environment=NOX_ROOT="/workspace/nox"
 CONF
-supervisorctl reread 2>&1 | tail -1; supervisorctl update 2>&1 | tail -1; sleep 45; supervisorctl status nox_hands
+supervisorctl reread 2>&1 | tail -1; supervisorctl update 2>&1 | tail -1; supervisorctl restart nox_hands 2>&1 | tail -1; sleep 60; supervisorctl status nox_hands
 echo "after: $(python3 -I - <<'PY'
 import json,glob,collections,sqlite3
 N="/workspace/nox"; c=collections.Counter(json.load(open(p,encoding="utf-8")).get("status") for p in glob.glob(N+"/state/tasks/*.json")); print("tasks",dict(c))
