@@ -87,7 +87,7 @@ class Vad:
                 self.run = 0
                 if self.inspeech:
                     self.sil += 1
-                    if self.sil >= 22: eou = True; self.inspeech = False; self.sil = 0
+                    if self.sil >= getattr(self, 'EOU', 22): eou = True; self.inspeech = False; self.sil = 0
         return pmax, self.run, eou
 VAD = {}
 def vad_for(cid):
@@ -121,19 +121,11 @@ def stop_turn(cid, sync=False):
         except Exception: pass
     th = threading.Thread(target=_web, daemon=True); th.start()
     if sync: th.join(10)
-def voice_turn(h, cid, user):
-    s = SESS[cid] = {"stop": False, "speaking": True, "t0": time.time(), "done": threading.Event(), "up": None}
-    wl = threading.Lock()
-    def ev(o):
-        d = json.dumps(o, ensure_ascii=False).encode() + b"\n"
-        with wl: h.wfile.write(b"%x\r\n" % len(d) + d + b"\r\n"); h.wfile.flush()
+def run_turn(ev, s, cid, user, text, t0, filler_at=None):
+    """Ход: чат -> нарезка фраз -> Piper. ev(o) отдаёт событие (в поток ответа или в очередь). Филлер, если первой речи нет к моменту filler_at (секунды от t0)."""
+    buf = ""; seq = 0; first = [None]; filler_s = [None]; c = None
     try:
-        audio = h.rfile.read(int(h.headers.get("Content-Length") or 0)); t0 = time.time()
-        c = hp(STT); c.request("POST", "/transcribe", audio, {"Content-Type": h.headers.get("Content-Type") or "audio/wav"}); r = c.getresponse(); j = json.loads(r.read() or b"{}"); c.close()
-        text = str(j.get("text") or "").strip(); ev({"t": "stt", "text": text, "ms": int((time.time() - t0) * 1000)})
-        if not text: return ev({"t": "done", "empty": True})
         c = hp(WEB); s["up"] = c; c.request("POST", "/api/turn", json.dumps({"conversation_id": cid, "message": text, "mode": "fast", "user_id": user, "source": "voice"}), {"Content-Type": "application/json"}); r = c.getresponse()
-        buf = ""; seq = 0; first = [None]; filler_s = [None]
         def emit(pcm, sr, sn, filler=False):
             nonlocal seq
             if pcm and not s["stop"]:
@@ -146,7 +138,8 @@ def voice_turn(h, cid, user):
                     if first[0] is None and not s["stop"]: filler_s[0] = time.time() - t0; emit(pcm, sr, f, True)
                 except Exception: pass
         if not E("NOX_NO_FILLER"):
-            tm = threading.Timer(max(0.0, float(E("NOX_FILLER_S", "0.5")) - (time.time() - t0)), fire_filler); tm.daemon = True; tm.start()
+            fa = float(E("NOX_FILLER_S", "0.5")) if filler_at is None else filler_at
+            tm = threading.Timer(max(0.0, fa - (time.time() - t0)), fire_filler); tm.daemon = True; tm.start()
         def speak(sents):
             for sn in sents:
                 if s["stop"]: return
@@ -162,16 +155,96 @@ def voice_turn(h, cid, user):
                 ev({"t": "delta", "text": o.get("text")}); buf += str(o.get("text") or ""); sents, buf = split_sent(buf, first=first[0] is None); speak(sents)
             elif o.get("t") in ("error",): ev(o); break
         if not s["stop"]: speak(split_sent(buf, True)[0])
-        try: c.close()
-        except Exception: pass
         ev({"t": "barge" if s["stop"] else "done", "first_audio_s": first[0], "filler_s": filler_s[0], "chunks": seq, "cancel_ms": int((time.time() - s["stop_t"]) * 1000) if s.get("stop_t") else None})
     except Exception as e:
         try: ev({"t": "error", "error": str(e)[:150]})
         except Exception: pass
     finally:
+        try: c.close()
+        except Exception: pass
         s["speaking"] = False; s["done"].set()
+def voice_turn(h, cid, user):
+    s = SESS[cid] = {"stop": False, "speaking": True, "t0": time.time(), "done": threading.Event(), "up": None}
+    wl = threading.Lock()
+    def ev(o):
+        d = json.dumps(o, ensure_ascii=False).encode() + b"\n"
+        with wl: h.wfile.write(b"%x\r\n" % len(d) + d + b"\r\n"); h.wfile.flush()
+    try:
+        audio = h.rfile.read(int(h.headers.get("Content-Length") or 0)); t0 = time.time()
+        c = hp(STT); c.request("POST", "/transcribe", audio, {"Content-Type": h.headers.get("Content-Type") or "audio/wav"}); r = c.getresponse(); j = json.loads(r.read() or b"{}"); c.close()
+        text = str(j.get("text") or "").strip(); ev({"t": "stt", "text": text, "ms": int((time.time() - t0) * 1000)})
+        if not text: s["speaking"] = False; s["done"].set(); return ev({"t": "done", "empty": True})
+        run_turn(ev, s, cid, user, text, t0)
+    except Exception as e:
+        try: ev({"t": "error", "error": str(e)[:150]})
+        except Exception: pass
+        s["speaking"] = False; s["done"].set()
+    finally:
         try: h.wfile.write(b"0\r\n\r\n")
         except Exception: pass
+# ---- потоковый режим: кадры микрофона -> STT-стрим :8093 параллельно с речью; финал по eou; события через /voice/events
+MIC = {}; EOU_FR = int(E("NOX_EOU_FRAMES", "12"))
+class Mic:
+    def __init__(self, cid, user):
+        import queue
+        self.cid, self.user = cid, user; self.q = queue.Queue(); self.ev = []; self.n = 0; self.lock = threading.Condition(); self.sid = None; self.busy = False
+        self.partial = ""; self.t_eou = None; self.turn = False; self.last = time.time(); self.vad = Vad(); self.vad.EOU = EOU_FR
+        threading.Thread(target=self.work, daemon=True).start()
+    def push(self, o):
+        with self.lock:
+            self.n += 1; o = dict(o, id=self.n); self.ev.append(o); self.ev = self.ev[-400:]; self.lock.notify_all()
+    def _stt(self, path, body=b"", ct="application/octet-stream"):
+        c = hp(STT); c.request("POST", path, body, {"Content-Type": ct}); r = c.getresponse(); j = json.loads(r.read() or b"{}"); c.close(); return j
+    def start_turn(self, text):
+        if self.turn: return
+        self.turn = True; cid = self.cid; t0 = self.t_eou or time.time()
+        s = SESS[cid] = {"stop": False, "speaking": True, "t0": t0, "done": threading.Event(), "up": None}
+        self.push({"t": "stt", "text": text, "ms": int((time.time() - t0) * 1000)})
+        def go():
+            run_turn(self.push, s, cid, self.user, text, t0, filler_at=0.0 if self.filler_done else None); self.turn = False
+        threading.Thread(target=go, daemon=True).start()
+    filler_done = False
+    def work(self):
+        import queue
+        while time.time() - self.last < 120:
+            try: kind, pcm = self.q.get(timeout=5)
+            except queue.Empty: continue
+            try:
+                if self.sid is None: self.sid = self._stt("/stream/start", json.dumps({"language": "ru", "partial": 0.5}).encode(), "application/json").get("id")
+                res = self._stt("/stream/%s/%s" % (self.sid, "finish" if kind == "finish" else "chunk"), pcm if kind == "chunk" else b"")
+                for e in res.get("events", []):
+                    if e.get("type") == "partial": self.partial = e.get("text", ""); self.push({"t": "partial", "text": self.partial})
+                    elif e.get("type") == "final":
+                        txt = str(e.get("text") or "").strip(); self.partial = ""
+                        if txt: self.start_turn(txt)
+                if kind == "finish": self.busy = False
+            except Exception as e: self.push({"t": "error", "error": str(e)[:100]}); self.busy = False
+        MIC.pop(self.cid, None)
+def mic_frames(cid, user, raw):
+    m = MIC.get(cid)
+    if m is None: m = MIC[cid] = Mic(cid, user)
+    m.last = time.time(); v = m.vad; pr, run, eou = v.feed(raw)
+    s = SESS.get(cid); o = {"speech": run >= 1, "p": round(pr, 3), "barge": False, "eou": eou, "vad": v.kind}
+    t_in = time.time()
+    if run >= 3 and s and s.get("speaking") and not s.get("stop"):
+        stop_turn(cid); s["done"].wait(0.25); m.turn = False; pcm, sr = FIX.get(ACK) or tts_pcm(ACK, pad=False)
+        o.update({"barge": True, "cancel_ms": int((time.time() - t_in) * 1000), "ack": ACK, "ack_sr": sr, "ack_pcm_b64": base64.b64encode(pcm).decode()})
+        m.push({"t": "barge", "cancel_ms": o["cancel_ms"]})
+    if not m.turn: m.q.put(("chunk", raw))
+    if eou and not m.turn and not o["barge"]:
+        m.t_eou = time.time() - EOU_FR * 0.032; m.busy = True; m.q.put(("finish", b""))
+        if not E("NOX_NO_FILLER"):
+            f = FILLERS[int(time.time()) % len(FILLERS)]; pcm, sr = FIX.get(f) or tts_pcm(f, pad=False); m.filler_done = True
+            m.push({"t": "audio", "seq": -1, "sr": sr, "text": f, "filler": True, "pcm_b64": base64.b64encode(pcm).decode(), "after_eou_ms": int((time.time() - m.t_eou) * 1000)})
+    return o
+def mic_events(cid, after, wait=15):
+    m = MIC.get(cid)
+    if m is None: return {"events": [], "next": after}
+    end = time.time() + wait
+    with m.lock:
+        while time.time() < end and not [e for e in m.ev if e["id"] > after]: m.lock.wait(0.5)
+        es = [e for e in m.ev if e["id"] > after]
+    return {"events": es, "next": es[-1]["id"] if es else after}
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     def log_message(self, *a): pass
@@ -184,6 +257,8 @@ class H(BaseHTTPRequestHandler):
             try: c = hp(STT); c.request("GET", "/health"); st = c.getresponse().status; c.close()
             except Exception: pass
             return self._j(200, {"ok": True, "off": os.path.exists(FLAG), "model": os.path.exists(MODEL) or bool(E("NOX_TTS_FAKE")), "stt_http": st, "vad": Vad().kind, "tts": "inproc" if _voice[0] else "cold", "fix": len(FIX), "pad": list(pad_prosody())})
+        if self.path.startswith("/voice/events"):
+            cid = re.sub(r"[^A-Za-z0-9_.-]", "", self.q("cid")); return self._j(200, mic_events(cid, int(self.q("after", "0") or 0)))
         self._j(404, {})
     def do_POST(self):
         if os.path.exists(FLAG): return self._j(503, {"error": "voice.off"})
@@ -203,6 +278,8 @@ class H(BaseHTTPRequestHandler):
                 stop_turn(cid); s["done"].wait(0.25); pcm, sr = FIX.get(ACK) or tts_pcm(ACK, pad=False)
                 o.update({"barge": True, "cancel_ms": int((time.time() - t_in) * 1000), "ack": ACK, "ack_sr": sr, "ack_pcm_b64": base64.b64encode(pcm).decode()})
             return self._j(200, o)
+        if p == "/voice/mic":
+            cid = re.sub(r"[^A-Za-z0-9_.-]", "", self.q("cid")) or "mic"; return self._j(200, mic_frames(cid, self.q("user", "owner"), raw))
         if p == "/voice/stop":
             cid = str(json.loads(raw or b"{}").get("cid") or ""); stop_turn(cid); return self._j(200, {"ok": True})
         self._j(404, {})
