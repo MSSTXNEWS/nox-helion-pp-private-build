@@ -1,16 +1,18 @@
+root/assistant.html
+root/board.html
 root/chat-dc.html
-root/constructor.html
 root/memory.html
+root/scene.html
 v1n/ab.css
 v1n/ab.js
 v1n/chat-dc.html
 v1n/chunk-5LOZM3L2.js
+v1n/chunk-7CEJ3PI5.js
 v1n/chunk-AL54HLTZ.js
 v1n/chunk-BR5QOH6F.js
 v1n/chunk-DQTKC3HJ.js
 v1n/chunk-EN73LCNK.js
 v1n/chunk-K5SORV3E.js
-v1n/chunk-NLPXVDBQ.js
 v1n/chunk-OVPL2TEC.js
 v1n/chunk-R6IUGRSK.js
 v1n/chunk-RDEQJVVW.js
@@ -56,6 +58,7 @@ v2/calendar.js
 v2/chunk-4AJXIFSW.js
 v2/chunk-4E724EOX.js
 v2/chunk-4K5V6H3V.js
+v2/chunk-5S6WBV4E.js
 v2/chunk-6GADUJQN.js
 v2/chunk-6OWKX7EX.js
 v2/chunk-6TZ6AUSY.js
@@ -68,6 +71,7 @@ v2/chunk-JEXNVZ45.js
 v2/chunk-JSOZOSMV.js
 v2/chunk-KALGDBHE.js
 v2/chunk-LUHD7C3B.js
+v2/chunk-QG3HSINJ.js
 v2/chunk-R2WEFIZZ.js
 v2/chunk-RQEWGD5T.js
 v2/chunk-W7QLLHSG.js
@@ -76,6 +80,8 @@ v2/cinema.js
 v2/connections.css
 v2/connections.js
 v2/constructor.js
+v2/contacts.css
+v2/contacts.js
 v2/evolution.css
 v2/evolution.js
 v2/finance.css
@@ -100,6 +106,8 @@ v2/g07-hardware.css
 v2/g07-hardware.js
 v2/kit-motion.js
 v2/kit.css
+v2/marketing.css
+v2/marketing.js
 v2/memory.js
 v2/messenger.css
 v2/messenger.js
