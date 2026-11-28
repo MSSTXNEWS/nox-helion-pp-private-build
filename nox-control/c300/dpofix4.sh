@@ -1,0 +1,14 @@
+echo "K1: dpofix4"; export RUNNER_TRACKING_ID=""
+N=/workspace/nox; D=$N/ops/dpo; W=$(mktemp -d)
+base64 -d > $W/mix_data.py <<'B64'
+IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiIyOC4xMTog0YHQvNC10YHRjCDQtNC70Y8gRFBPLdC60YDRg9Cz0LA6IGRwbzNfdHJhaW4gKyDQsNC90YLQuC3QuNC90YrQtdC60YbQuNC+0L3QvdGL0LUg0L/QsNGA0YsgKGRwb19pbmoqLmpzb25sLCDQv9C+0YLQvtC6IDQpICsgMjAlIHJlcGxheSDQuNC3INGB0YLQsNGA0L7Qs9C+IGRwb190cmFpbi5qc29ubC4g0JHQtdC3INC00YPQsdC70LXQuS4g0JLRi9GF0L7QtCBkcG9fbWl4Lmpzb25sLiDQotC+0LvRjNC60L4g0YfQuNGB0LvQsCDQsiBzdGRvdXQuIiIiCmltcG9ydCBqc29uLCBnbG9iLCByYW5kb20KRCA9ICIvd29ya3NwYWNlL25veC9vcHMvZHBvIjsgcm5kID0gcmFuZG9tLlJhbmRvbSgyODExKTsgc2VlbiA9IHNldCgpOyBtYWluID0gW107IGluaiA9IFtdCmRlZiBrZXkobyk6IHJldHVybiBqc29uLmR1bXBzKG8uZ2V0KCJwcm9tcHQiKSwgZW5zdXJlX2FzY2lpPUZhbHNlKSArIGpzb24uZHVtcHMoby5nZXQoImNob3NlbiIpLCBlbnN1cmVfYXNjaWk9RmFsc2UpCmRlZiBsb2FkKGYpOgogICAgb3V0ID0gW10KICAgIGZvciBsIGluIG9wZW4oZiwgZW5jb2Rpbmc9InV0Zi04Iik6CiAgICAgICAgbCA9IGwuc3RyaXAoKQogICAgICAgIGlmIG5vdCBsOiBjb250aW51ZQogICAgICAgIHRyeTogbyA9IGpzb24ubG9hZHMobCk7IGsgPSBrZXkobykKICAgICAgICBleGNlcHQgRXhjZXB0aW9uOiBjb250aW51ZQogICAgICAgIGlmIGsgaW4gc2VlbjogY29udGludWUKICAgICAgICBzZWVuLmFkZChrKTsgb3V0LmFwcGVuZChsKQogICAgcmV0dXJuIG91dAptYWluID0gbG9hZChEICsgIi9kcG8zX3RyYWluLmpzb25sIikKZm9yIGYgaW4gc29ydGVkKGdsb2IuZ2xvYihEICsgIi9kcG9faW5qKl90cmFpbi5qc29ubCIpKTogaW5qICs9IGxvYWQoZikKdHJ5OiBvbGQgPSBsb2FkKEQgKyAiL2Rwb190cmFpbi5qc29ubCIpCmV4Y2VwdCBFeGNlcHRpb246IG9sZCA9IFtdCm5fcmVwID0gbWluKGxlbihvbGQpLCBpbnQoMC4yNSAqIChsZW4obWFpbikgKyBsZW4oaW5qKSkpKSAgICMgMjAlINC+0YIg0LjRgtC+0LPQsApyZXAgPSBybmQuc2FtcGxlKG9sZCwgbl9yZXApCnJvd3MgPSBtYWluICsgaW5qICogMiArIHJlcCAgICMg0LjQvdGK0LXQutGG0LjQvtC90L3Ri9C1INC/0LDRgNGLIHgyOiDQstC+0YDQvtGC0LAg0YDRg9Cx0LjRgiDQuNC80LXQvdC90L4g0L3QsCDQvdC40YUKcm5kLnNodWZmbGUocm93cykKb3BlbihEICsgIi9kcG9fbWl4Lmpzb25sIiwgInciLCBlbmNvZGluZz0idXRmLTgiKS53cml0ZSgiXG4iLmpvaW4ocm93cykgKyAiXG4iKQpwcmludCgibWl4IHJvd3MiLCBsZW4ocm93cyksICJtYWluIiwgbGVuKG1haW4pLCAiaW5qIiwgbGVuKGluaiksICJyZXBsYXkiLCBuX3JlcCkK
+B64
+python3 -m py_compile $W/mix_data.py || { echo PYFAIL; exit 0; }
+cp -a $D/mix_data.py $D/mix_data.py.bak_$(date +%s); cp $W/mix_data.py $D/mix_data.py
+echo "inj_rows=$(wc -l < $D/dpo_inj1_train.jsonl)"
+# перезапуск круга с анти-инъекционными парами (тренер был на 0/800 ref-logprobs); kill -9 без trap — тело остаётся в гибриде, новый char_cycle сам увидит ncmoe22 и вернёт в конце
+for P in $(pgrep -f 'bash .*char_cycle.sh|python -I train_dpo.py'); do kill -9 $P; done; sleep 90
+echo "procs: $(ps -eo pid,stat,etimes,args | grep -E 'char_cycle|train_dpo' | grep -v grep | awk '{print $1,$2,$3,$4,$5}' | sed 's#/[^ ]*/##g' | tr '\n' ';')"
+grep -h 'mix rows' $D/run7.log | tail -1
+tail -4 $N/agent/autotrain/char_cycle.log | cut -c1-140
+echo "vram $(nvidia-smi --query-gpu=memory.used,memory.free --format=csv,noheader,nounits)"; rm -rf $W; echo END
