@@ -83,7 +83,7 @@ def run(ask, S, part="all", limit=None, keep=None):
         EMPTY[cid[:11]] += 1
         return ""
     def K(part_, id_, a):
-        if kf: kf.write(json.dumps({"part": part_, "id": id_, "answer": a}, ensure_ascii=False) + "\n")
+        if kf: kf.write(json.dumps({"part": part_, "id": id_, "answer": a}, ensure_ascii=False) + "\n"); kf.flush()
     if part in ("I", "all"):
         items = S["interview"][:limit] if limit else S["interview"]; fails = []
         for it in items:
