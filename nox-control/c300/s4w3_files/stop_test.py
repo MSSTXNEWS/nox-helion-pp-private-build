@@ -45,15 +45,15 @@ def live(trials=3):
     try:
         for i in range(trials):
             cid = "qa-stop-%d-%d" % (os.getpid(), i); b0 = slots_busy(); stamps.clear()
-            r = W.turn(cid, "Напиши очень подробное эссе на 2000 слов о истории математики, с примерами и датами.", stop_at=None, stop_after=3.0, timeout=90)
-            if r.get("busy") or r.get("ttft") is None: rows.append({"hold": True, "end": r.get("end")}); continue
+            r = W.turn(cid, "Напиши очень подробное эссе на 2000 слов о истории математики, с примерами и датами.", stop_at=3.0, stop_after=None, timeout=90)
+            if r.get("busy") or r.get("stop_s") is None: rows.append({"hold": True, "end": r.get("end")}); continue
             ts = stamps.get("t"); idle = None
             if ts is not None and b0 is not None:
                 while time.time() - ts < 30:
                     b = slots_busy()
                     if b is not None and b <= b0: idle = round(time.time() - ts, 2); break
                     time.sleep(0.25)
-            rows.append({"stop_s": None if r.get("stop_s") is None else round(r["stop_s"], 2), "gen_idle_s": idle, "end": r.get("end"), "ttft": round(r["ttft"], 2)})
+            rows.append({"stop_s": None if r.get("stop_s") is None else round(r["stop_s"], 2), "gen_idle_s": idle, "end": r.get("end"), "ttft": None if r.get("ttft") is None else round(r["ttft"], 2)})
             W.stop_turn = orig; orig(cid); W.stop_turn = st; time.sleep(2)
     finally: W.stop_turn = orig
     good = [x for x in rows if not x.get("hold")]

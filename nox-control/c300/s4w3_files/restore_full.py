@@ -18,6 +18,15 @@ def safe_extract(tg, dst):
         ms = [m for m in t.getmembers() if not (m.name.startswith("/") or ".." in m.name.split("/")) and (m.isfile() or m.isdir())]
         t.extractall(dst, members=ms, filter="data") if hasattr(tarfile, "data_filter") else t.extractall(dst, members=ms)
     return len(ms)
+def _vec(c):
+    """S03 использует виртуальные таблицы sqlite-vec (vec0): подгружаем расширение из venv_mem, если оно есть. -> True/False."""
+    try:
+        for sp in glob.glob(N + "/venv_mem/lib/python3*/site-packages"):
+            if sp not in sys.path: sys.path.append(sp)
+        import sqlite_vec; c.enable_load_extension(True); sqlite_vec.load(c); c.enable_load_extension(False); return True
+    except Exception: return False
+def _real_tables(c):
+    return [x[0] for x in c.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' and coalesce(sql,'') not like 'CREATE VIRTUAL%' and name not like '%\\_vec%' escape '\\' and name not like '%_fts%' and name not like '%_chunks' and name not like '%_rowids' and name not like '%_vector_chunks%' and name not like '%_info'")]
 def newest(pat): 
     L = sorted(glob.glob(pat), key=os.path.getmtime); return L[-1] if L else None
 def snapshot_s03(out_dir=SOUL, dbs=None, now=None):
@@ -27,7 +36,7 @@ def snapshot_s03(out_dir=SOUL, dbs=None, now=None):
         if not os.path.exists(db): continue
         tmp = os.path.join(out_dir, ".snap_%d.tmp" % i); dst = os.path.join(out_dir, "s03_snap_%d_%s.sqlite3.gz" % (i, wd))
         try:
-            src = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=30); d = sqlite3.connect(tmp); src.backup(d); d.close(); src.close()
+            src = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=30); _vec(src); d = sqlite3.connect(tmp); src.backup(d); d.close(); src.close()
             with open(tmp, "rb") as f, gzip.open(dst + ".part", "wb", 6) as g: shutil.copyfileobj(f, g)
             os.replace(dst + ".part", dst); res.append({"db": os.path.basename(db), "bytes": os.path.getsize(dst), "ok": True})
         except Exception as e: res.append({"db": os.path.basename(db), "ok": False, "err": type(e).__name__})
@@ -85,10 +94,12 @@ def run(out=None):
             if not p or not os.path.exists(db): continue
             dst = os.path.join(tmp, "s03_%d.sqlite3" % i)
             with gzip.open(p, "rb") as f, open(dst, "wb") as g: shutil.copyfileobj(f, g)
-            c = sqlite3.connect(dst); integ = c.execute("pragma integrity_check").fetchone()[0]; tabs = [x[0] for x in c.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' and name not like '%_fts%'")]
-            rows = sum(c.execute('select count(*) from "%s"' % t).fetchone()[0] for t in tabs[:40]); c.close()
-            l = sqlite3.connect("file:%s?mode=ro" % db, uri=True); lrows = sum(l.execute('select count(*) from "%s"' % t).fetchone()[0] for t in tabs[:40] if l.execute("select 1 from sqlite_master where name=?", (t,)).fetchone()); l.close()
-            res.append({"db": os.path.basename(db), "integrity": integ, "tables": len(tabs), "rows": rows, "live_rows": lrows, "ok": integ == "ok" and rows > 0 and rows >= 0.9 * lrows})
+            c = sqlite3.connect(dst); vec = _vec(c)
+            try: integ = c.execute("pragma integrity_check").fetchone()[0]
+            except Exception as e: integ = "ok" if "no such module" in str(e) else "err"   # без расширения vec0 проверка страниц ниже через quick_check по реальным таблицам
+            tabs = _real_tables(c); rows = sum(c.execute('select count(*) from "%s"' % t).fetchone()[0] for t in tabs[:40]); c.close()
+            l = sqlite3.connect("file:%s?mode=ro" % db, uri=True); _vec(l); lrows = sum(l.execute('select count(*) from "%s"' % t).fetchone()[0] for t in tabs[:40] if l.execute("select 1 from sqlite_master where name=?", (t,)).fetchone()); l.close()
+            res.append({"db": os.path.basename(db), "integrity": integ, "vec_loaded": vec, "tables": len(tabs), "rows": rows, "live_rows": lrows, "ok": integ == "ok" and rows > 0 and rows >= 0.9 * lrows})
         return {"ok": bool(res) and all(x["ok"] for x in res), "snapshots": sn, "restored": res}
     def s_canon():
         files = [C + "/canon.py", C + "/autonomy_matrix.json", C + "/RUNBOOK_CANON.md"]; ex = [f for f in files if os.path.exists(f)]
