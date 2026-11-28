@@ -57,9 +57,11 @@ HANDLERS = {"report": h_report, "todo": h_todo}
 # --------------------------------------------------------------- цикл
 def ctx_of(r, now):
     sn = C.load_json(C.S(r) + "/self_now.json", {}) or {}; free = (sn.get("telemetry") or {}).get("disk_free_gb")
+    busy = False
     try:
+        if r != "/workspace/nox": raise RuntimeError("test root")
         sys.path.insert(0, "/workspace/nox/agent"); from nox_ops import common as OC; busy = bool(OC.chat_busy())
-    except Exception: busy = False
+    except Exception: pass
     return {"disk_free": free if free is not None else 100.0, "chat_busy": busy, "now": now}
 def process(r, t, ctx):
     tid = t["id"]; dec = D.decide_task(t, ctx, r); act = dec["action"]; seqs = []
