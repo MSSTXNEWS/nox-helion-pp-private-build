@@ -1,0 +1,2 @@
+echo "K1: cr_ps"; ps -eo pid,etimes,stat,args | grep -E 'ftest|k1_cr_|cr_fpatch|nox_edit' | grep -v grep | awk '{print $1,$2,$3,$4,$5,$6}' | sed 's#/[^ ]*/##g' | cut -c1-120
+echo "filter_patched=$(grep -c nox_filter /workspace/nox/ops/draw/invoke_draw.py) conscience=$(grep -c nox_filter /workspace/nox/imgsvc/conscience.py) nf_file=$([ -f /workspace/nox/ops/draw/nox_filter.py ] && echo 1 || echo 0)"; echo END
