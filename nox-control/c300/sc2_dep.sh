@@ -22,8 +22,8 @@ if not any("X-NOX-Owner-Token" in l for l in L):
 else: print("gate_header_present")
 M=open(cf).read().split("\n"); done=0
 for k,l in enumerate(M):
-    if re.match(r"\s*path\s+/api/draft\b",l) and "/api/nox/proposals" not in l: M[k]=l.rstrip()+" /api/nox/proposals /api/nox/consent"; done=1
-open(cf,"w").write("\n".join(M)); print("main_paths_added",done)
+    if "/api/draft" in l and "/api/memory/add" in l and "/api/nox/proposals" not in l: M[k]=l.rstrip()+" /api/nox/proposals /api/nox/consent"; done=1
+open(cf,"w").write("\n".join(M)); print("main_paths_added",done, "draft_lines",sum(1 for l in M if "/api/draft" in l))
 PY
 GP=$(pgrep -f "owner_gate/Caddyfile" | head -1); GB=$(readlink /proc/$GP/exe)
 MP=$(pgrep -f "web_chat_auth/Caddyfile" | head -1); MB=$(readlink /proc/$MP/exe)
