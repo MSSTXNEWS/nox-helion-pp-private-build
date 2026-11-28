@@ -7,7 +7,7 @@ openssl pkeyutl -decrypt -inkey $N/state/keys/inbox.pem -in $W/k -out $W/kk && o
 [ "$(md5sum < $W/chat_core.py | cut -c1-32)" = 664d955d36956227785b700f3d6c1695 ] || { echo BAD_PAYLOAD; rm -rf $W; echo END; exit 0; }
 python3 -m py_compile $W/chat_core.py || { echo COMPILE_FAIL; echo END; exit 0; }
 cp -a $F $F.bak_v3a; cp $W/chat_core.py $F; mkdir -p $N/mods; cp $W/mods/*.py $N/mods/; mkdir -p $N/state/core; cp $W/registry.json $N/state/core/registry.json; supervisorctl restart nox_sidecar >/dev/null 2>&1; echo "mods=$(ls $N/mods/*.py | wc -l)"; rm -rf $W; echo applied
-touch $N/state/chat_night.off; true
+true
 curl -sfL "$R/owner/relaunch.py?cb=$(date +%s)" -o /tmp/relaunch.py
 pid=$(ss -ltnp | grep "127.0.0.1:8091 " | sed 's/.*pid=\([0-9]*\).*/\1/'); python3 /tmp/relaunch.py $pid $N/web/restart_k1.log http://127.0.0.1:8091/health 2>&1 | tail -1
 sleep 6
