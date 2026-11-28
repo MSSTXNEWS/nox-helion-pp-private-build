@@ -1,7 +1,7 @@
 import json, sys
 b = json.load(open(sys.argv[1]))["res"]; n = json.load(open(sys.argv[2]))["res"]
 def g(r, s, k): return (r.get(s) or {}).get(k)
-rows = [("c1_cold", "ttft_p50"), ("c1_cold", "ttft_p95"), ("c3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50"), ("c1_bg3_cold", "ttft_p95"), ("c1_bg3_warm", "ttft_p95"), ("c1_warm", "dec_med"), ("c1_bg3_warm", "dec_med"), ("c3_cold", "agg_tok_s")]
+rows = [("c1_cold", "ttft_p50"), ("c1_cold", "ttft_p95"), ("c3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50"), ("c1_bg3_cold", "ttft_p95"), ("c1_bg3_warm", "ttft_p95"), ("c1_warm", "dec_med"), ("c1_bg3_warm", "dec_med"), ("c3_cold", "agg_tok_s"), ("c1_bg9_cold", "ttft_p95"), ("c1_bg9_cold", "total_tok_s"), ("c1_bg3_cold", "total_tok_s")]
 gain = {}
 for s, k in rows:
     x, y = g(b, s, k), g(n, s, k)
@@ -13,4 +13,8 @@ errs = sum((n.get(s) or {}).get("err", 0) for s in n if s != "label" and s != "q
 print("QUALITY", q, "ok", qok, "errs", errs)
 better = gain.get(("c1_bg3_cold", "ttft_p95"), 0) <= -10 or gain.get(("c1_bg3_warm", "dec_med"), 0) >= 10 or gain.get(("c1_warm", "dec_med"), 0) >= 10
 worse = any(gain.get(k, 0) >= 10 for k in [("c1_bg3_cold", "ttft_p95"), ("c1_bg3_cold", "ttft_p50")]) or any(gain.get(k, 0) <= -10 for k in [("c1_warm", "dec_med"), ("c1_bg3_warm", "dec_med")])
+if "c1_bg9_cold" in n:   # e5: ≤1 с p95 у фронта при 9 фоновых и суммарный ток/с вырос
+    f95 = g(n, "c1_bg9_cold", "ttft_p95"); tb = g(b, "c1_bg9_cold", "total_tok_s") or g(b, "c1_bg3_cold", "total_tok_s"); tn = g(n, "c1_bg9_cold", "total_tok_s")
+    ok9 = f95 is not None and f95 <= 1.0 and tn and tb and tn > tb
+    print("E5 front_p95_bg9", f95, "total base/new", tb, tn); print("VERDICT", "KEEP" if (ok9 and qok and errs == 0) else "REVERT", "e5"); sys.exit(0)
 print("VERDICT", "KEEP" if (better and not worse and qok and errs == 0) else "REVERT", "better", better, "worse", worse)

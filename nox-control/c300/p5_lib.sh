@@ -23,14 +23,23 @@ for m in mods:
 open(dst, "w").write("\n".join(t) + "\n")
 print("newcmd_lines", len(t))
 PY
+python3 - "$NEW" <<'PY'
+import sys
+t=open(sys.argv[1]).read().split("\n")
+if "--slot-save-path" not in t:
+    t=[x for x in t if x!=""]+["--slot-save-path","/workspace/nox/state/p5/slots"]; open(sys.argv[1],"w").write("\n".join(t)+"\n")
+PY
+mkdir -p $P/slots
 echo "diff_vs_base:"; diff $BASE $NEW | grep '^[<>]' | tr '\n' ' '; echo
 restart(){ bash $N/ops/body_restart.sh --force --cmd $1 --reason "$2" 2>&1 | tail -2 | sed -E 's#/[^ ]*/#<d>/#g' | cut -c1-200; }
-restart $NEW "p5 try $NAME"
+slotsave(){ curl -s -m20 -X POST "localhost:8104/slots/0?action=save" -H 'Content-Type: application/json' -d '{"filename":"front0.bin"}' -o /dev/null -w "slot_save=%{http_code} "; }
+slotrest(){ for i in $(seq 20); do curl -s -m2 localhost:8104/health | grep -q ok && break; sleep 2; done; curl -s -m30 -X POST "localhost:8104/slots/0?action=restore" -H 'Content-Type: application/json' -d '{"filename":"front0.bin"}' -o /dev/null -w "slot_restore=%{http_code}\n"; }
+slotsave; restart $NEW "p5 try $NAME"; slotrest
 sleep 5
 echo "after_restart: $(curl -s -m3 localhost:8104/health) vram_mib=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits) load=$(cut -d' ' -f1 /proc/loadavg)"
-python3 /tmp/p5_bench.py $NAME quick 2>&1 | tail -3 | cut -c1-1800
+P5_BG9=${P5_BG9:-} python3 /tmp/p5_bench.py $NAME quick 2>&1 | tail -3 | cut -c1-1800
 python3 /tmp/p5_cmp.py $P/bench_base.json $P/bench_$NAME.json | tee $P/verdict_$NAME.txt
 if grep -q "VERDICT KEEP" $P/verdict_$NAME.txt; then echo "KEEP $NAME (cmd оставлен работающим)"; echo $NAME > $P/last_keep; cp $NEW $P/best_cmd.txt 2>/dev/null
-else echo "REVERT $NAME"; restart $BASE "p5 revert $NAME"; fi
+else echo "REVERT $NAME"; slotsave; restart $BASE "p5 revert $NAME"; slotrest; fi
 echo "final: $(curl -s -m3 localhost:8104/health) ncmoe=$(ps -eo args | grep 'llama-server.*--port 8104' | grep -v grep | grep -o 'n-cpu-moe [0-9]*' | head -1)"
 echo END

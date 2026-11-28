@@ -34,14 +34,17 @@ def req(q, slot, maxtok=150, cold=False, temp=0.3):
 def pct(a, p):
     a = sorted(a); return round(a[min(len(a) - 1, int(round(p * (len(a) - 1))))], 3) if a else None
 class BG:
-    def __init__(s, n): s.stop = False; s.th = [threading.Thread(target=s.run, args=(i + 1,), daemon=True) for i in range(n)]; s.tok = 0
+    def __init__(s, n): s.stop = False; s.th = [threading.Thread(target=s.run, args=(1 + (i % max(1, NSLOTS - 1)),), daemon=True) for i in range(n)]; s.tok = 0
     def run(s, slot):
         i = 0
         while not s.stop:
             i += 1; r = req("Напиши подробный рассказ о путешествии №%d." % i, slot, maxtok=700); s.tok += r.get("n", 0) if "err" not in r else 0
     def start(s): [t.start() for t in s.th]
     def end(s): s.stop = True; [t.join(timeout=60) for t in s.th]
-res = {"label": LABEL}
+import urllib.request
+try: NSLOTS = json.load(urllib.request.urlopen("http://127.0.0.1:%d/props" % PORT, timeout=5)).get("total_slots", 4)
+except Exception: NSLOTS = 4
+res = {"label": LABEL, "slots": NSLOTS}
 req("прогрев", 0, 8)
 def scen(name, nclients, nbg, cold, reps):
     bg = BG(nbg)
@@ -57,7 +60,7 @@ def scen(name, nclients, nbg, cold, reps):
     ok = [o for o in outs if "err" not in o and o["ttft"] is not None]
     tt = [o["ttft"] for o in ok]; dc = [o["dec"] for o in ok if o["dec"]]
     res[name] = {"n": len(outs), "err": len(outs) - len(ok), "ttft_p50": pct(tt, .5), "ttft_p95": pct(tt, .95), "dec_med": round(statistics.median(dc), 1) if dc else None,
-                 "agg_tok_s": round(sum(o["n"] for o in ok) / dt, 1), "pn_med": statistics.median([o["pn"] or 0 for o in ok]) if ok else None}
+                 "agg_tok_s": round(sum(o["n"] for o in ok) / dt, 1), "total_tok_s": round((sum(o["n"] for o in ok) + bgtok) / dt, 1), "pn_med": statistics.median([o["pn"] or 0 for o in ok]) if ok else None}
 # front on slot 0; with clients>1 they share slot 0 -> use distinct slots when no bg
 scen("c1_warm", 1, 0, False, 6 if QUICK else 12)
 scen("c1_cold", 1, 0, True, 6)
@@ -65,6 +68,8 @@ if not QUICK: scen("c3_warm", 3, 0, False, 6)
 scen("c3_cold", 3, 0, True, 4)
 scen("c1_bg3_warm", 1, 3, False, 8 if QUICK else 12)
 scen("c1_bg3_cold", 1, 3, True, 16)
+if os.environ.get("P5_BG9"):
+    scen("c1_bg9_warm", 1, 9, False, 8); scen("c1_bg9_cold", 1, 9, True, 16)
 # quality: 12 qa temp 0.3, 250 tok
 qa = []; 
 for i, q in enumerate(QA): qa.append(req(q, 0, maxtok=300))
