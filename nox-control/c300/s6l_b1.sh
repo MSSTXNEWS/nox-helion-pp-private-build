@@ -25,6 +25,8 @@ cp $N/state/chat_gate.log $W/chat_gate.log; cp $N/state/chat_judge.log $W/chat_j
 tar czf $W/a.tgz -C $W corpus.jsonl chat_gate.log chat_judge.log; echo "tgz_bytes=$(stat -c %s $W/a.tgz)"
 openssl rand -out $W/k 32
 openssl enc -aes-256-cbc -pbkdf2 -salt -in $W/a.tgz -out $W/a.enc -pass file:$W/k
-echo "EK $(openssl pkeyutl -encrypt -pubin -inkey $P -in $W/k | base64 -w0)"
-echo "ED_BEGIN"; base64 -w0 $W/a.enc; echo; echo "ED_END"
+S=$N/state/s6; mkdir -p $S; cp $W/a.enc $S/corpus.enc
+openssl pkeyutl -encrypt -pubin -inkey $P -in $W/k | base64 -w0 > $S/corpus.ek
+base64 -w0 $W/a.enc > $S/corpus.b64; echo "b64_bytes=$(stat -c %s $S/corpus.b64) chunks=$(( ($(stat -c %s $S/corpus.b64)+299999)/300000 ))"
+echo "EK $(cat $S/corpus.ek)"
 rm -rf $W $P; echo END
