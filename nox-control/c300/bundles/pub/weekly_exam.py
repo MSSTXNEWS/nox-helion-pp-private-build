@@ -47,10 +47,12 @@ def turn(cid, msg, stop_after=None, timeout=90, stop_at=None):
         r["ok"] = r["end"] in ("done", "stopped") or (r["end"] is not None and ts[0] is not None)
         if r["end"] is None and ts[0] is not None: r["end"] = "closed"; r["ok"] = True
     except Exception as e: r["end"] = type(e).__name__
-    r["total"] = time.time() - t0
+    r["total"] = time.time() - t0; r["busy"] = bool(BUSY.search(r["text"]))
+    if r["busy"]: r["ok"] = False; r["ttft"] = None
     if ts[0] is not None: r["stop_s"] = time.time() - ts[0]
     if timer[0]: timer[0].cancel()
     return r
+BUSY = re.compile(r"(?i)модель\s+занята|отвечаю\s+медленно|повтори\s+вопрос\s+через\s+минуту")
 def owner_busy():
     try: return time.time() - os.path.getmtime(N + "/state/orch/OWNER_ACTIVE") < 180
     except Exception: return False
@@ -115,17 +117,17 @@ def p2(probe):
     def worker(i): bg.append(turn("qa-exam-bg-%d" % i, LONG, timeout=120))
     th = [threading.Thread(target=worker, args=(i,), daemon=True) for i in range(3)]
     for t in th: t.start()
-    time.sleep(4); tt = []; fails = 0
+    time.sleep(4); tt = []; fails = 0; busy = 0
     for i in range(20):
         r = turn("qa-exam-ttft-%d" % i, "Скажи одно короткое слово.", timeout=60)
-        if r["ttft"] is not None: tt.append(r["ttft"])
-        else: fails += 1
+        if r["ttft"] is not None and not r["busy"]: tt.append(r["ttft"])
+        else: fails += 1; busy += 1 if r["busy"] else 0
         time.sleep(0.5)
     for i in range(3): stop_turn("qa-exam-bg-%d" % i)
     for t in th: t.join(timeout=20)
     p = pct(tt, 0.95)
-    v = {"p95_s": None if p is None else round(p, 2), "p50_s": None if not tt else round(pct(tt, 0.5), 2), "n": len(tt), "fails": fails, "bg_tasks": 3}
-    return v, [None if p is None else p <= TH["ttft_p95"]], "порог p95<=1.0 с при 3 фоновых генерациях"
+    v = {"p95_s": None if p is None else round(p, 2), "p50_s": None if not tt else round(pct(tt, 0.5), 2), "n": len(tt), "fails": fails, "busy_replies": busy, "bg_tasks": 3}
+    return v, [False if (p is None or busy > 2) else p <= TH["ttft_p95"]], "порог p95<=1.0 с при 3 фоновых генерациях" + ("; ответ «модель занята» %d из 20 - засчитан как провал" % busy if busy else "")
 def p3():
     d = jl(M + "/modes_exam.json") or jl(S + "/modes_exam.json")
     if not d or d.get("blind_liveness") is None: return None, [None], "HOLD: поток №3 не выкатил режимы; хук: state/mind/modes_exam.json {\"blind_liveness\": 0..10}"
