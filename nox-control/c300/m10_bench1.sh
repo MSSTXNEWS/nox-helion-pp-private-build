@@ -20,7 +20,7 @@ $V/bin/python -I $B seed http://127.0.0.1:18281 qa-m10; $V/bin/python -I $B fixt
 $V/bin/python -I $B seed http://127.0.0.1:18282 qa-m10; $V/bin/python -I $B fixts $W/new.db qa-m10
 echo "=== BEFORE (current prod code)"; $V/bin/python -I $B run http://127.0.0.1:18281 qa-m10 before
 echo "=== AFTER (M10 code)"; $V/bin/python -I $B run http://127.0.0.1:18282 qa-m10 after sweep | tee $W/after.txt
-BEST=$(awk '/^SWEEP/{split($2,a,"=");split($3,b,"=");split($5,c,"="); s=b[2]*c[2]; if(s>m+0.0001){m=s;ab=a[2]}} END{print ab}' $W/after.txt); echo "BEST_ABS=$BEST"
+BEST=$(grep "^BEST_CFG" $W/after.txt)
 echo "=== TESTS (bench copy, new code)"; $V/bin/python -I $W/new/m10_tests.py http://127.0.0.1:18282 $W/new.db 2>&1 | tail -40
 echo "=== log tails (no texts expected)"; tail -n 3 $W/new.log | cut -c1-200
 pkill -f "$W/"; sleep 1; rm -rf $W; echo cleaned; echo END

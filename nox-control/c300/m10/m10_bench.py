@@ -71,12 +71,29 @@ def run(url, user, label, sweep=False):
     lat.sort()
     print("BENCH %s n=%d hit@4=%.3f top1=%.3f returned=%d precision=%.3f neg_empty=%d/%d lat_p50=%dms lat_p95=%dms" % (label, len(D), hit / float(len(D)), top1 / float(len(D)), ret, prec, negempty, len(NEG), lat[len(lat) // 2], lat[int(len(lat) * .95) - 1]))
     if sweep:
-        for ab in (0.0, 0.02, 0.05, 0.08, 0.12, 0.2, 0.3, 0.5):
-            h = 0; rt = 0; ne = 0
-            for g, ids, dbg, _ in res:
-                top = max([x[1] for x in dbg], default=0)
-                sel = [x[0] for x in dbg if (x[1] >= max(ab, 0.4 * top)) or x[2] >= 0.8][:4]; h += g in sel; rt += len(sel)
-            print("SWEEP abs=%.2f hit=%.3f ret=%d prec=%.3f" % (ab, h / float(len(D)), rt, h / float(rt) if rt else 0))
+        negd = []
+        for q in NEG:
+            r = P(url, "/recall", {"q": q, "user": user, "k": 4, "debug": True}); negd.append(r.get("debug") or [])
+        def sel(dbg, ab, sm, rl):
+            top = max([x[1] for x in dbg], default=0)
+            if not (top >= ab or max([x[2] for x in dbg], default=0) >= sm): return []
+            return [x[0] for x in dbg if (x[1] >= rl * top) or x[2] >= 0.8][:4]
+        grid = []
+        for ab in (0.0, 0.0005, 0.001, 0.002, 0.003, 0.005, 0.01, 0.03):
+            for sm in (0.0, 0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7):
+                for rl in (0.1, 0.25, 0.4):
+                    h = rt = 0
+                    for g, ids, dbg, _ in res:
+                        sl = sel(dbg, ab, sm, rl); h += g in sl; rt += len(sl)
+                    ne = sum(1 for d in negd if not sel(d, ab, sm, rl))
+                    hr = h / float(len(D)); pr = h / float(rt) if rt else 0.0; nr = ne / float(len(NEG))
+                    grid.append((hr * pr * (0.5 + 0.5 * nr) + 0.0001 * (ab + sm), ab, sm, rl, hr, pr, nr, rt))
+        grid.sort(reverse=True)
+        for g in grid[:6]: print("GRID J=%.3f abs=%s simmin=%s rel=%s hit=%.3f prec=%.3f neg_empty=%.2f ret=%d" % g)
+        g = grid[0]; print("BEST_CFG " + json.dumps({"abs": g[1], "simmin": g[2], "rel": g[3]}))
+        # score stats
+        gs = sorted(x[1] for _, _, dbg, _ in res for x in dbg[:1]); print("TOPSCORE_POS median=%.4f min=%.4f" % (gs[len(gs)//2], gs[0]))
+        ns = sorted(max([x[1] for x in d], default=0) for d in negd); print("TOPSCORE_NEG median=%.4f max=%.4f" % (ns[len(ns)//2], ns[-1]))
 if __name__ == "__main__":
     a = sys.argv
     if a[1] == "seed": print("SEEDED", len(seed(a[2], a[3])))
