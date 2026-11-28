@@ -37,7 +37,7 @@ class T(unittest.TestCase):
         now = time.time(); r = mk(now); b = O.tick(r, now, GPU, host=HOST)["panel"]["DA"]
         with open(r + "/state/LISKA_GATES_LOG.jsonl", "a") as f: f.write(json.dumps({"t": C.iso_z(now), "accepted": 1}) + "\n")
         o = O.tick(r, now + 30, GPU, host=HOST); self.assertGreater(o["panel"]["DA"], b)
-        tf = o["top_feeling"]; self.assertIsNotNone(tf); self.assertEqual(tf["name"], "удовлетворение")
+        tf = o["top_feeling"]; self.assertIsNotNone(tf); self.assertEqual(tf["name"], "гордость")
         rec = C.resolve(r, tf["cause"]); self.assertIsNotNone(rec); self.assertEqual(rec["kind"], "organism")
     def test_rollback_frustration_and_cort_up(self):
         now = time.time(); r = mk(now); b = O.tick(r, now, GPU, host=HOST)["panel"]["CORT"]

@@ -81,6 +81,15 @@ def progress_events(r, st, now):
     acc = int(tv.get("accepted") or 0)
     if acc > st.get("accepted_n", 0) and "accepted_n" in st: ev.append({"kind": "adapter_accept", "t": now, "ref": "tv:%d" % acc, "w": 1.0})
     st["accepted_n"] = acc
+    try:
+        import nox_absorb
+        for iid, it in nox_absorb.load(r)["items"].items():
+            for h in it.get("history", []):
+                key = "ab:%s:%s" % (iid, h.get("ts"))
+                if h.get("to") == "ABSORBED" and key not in seen:
+                    seen.add(key)
+                    if not first or C.parse_ts(h["ts"]) >= cut: ev.append({"kind": "absorbed", "t": C.parse_ts(h["ts"]), "ref": key, "w": 1.0})
+    except Exception: pass
     for tid in tasks_done(r, st, now):
         if not first: ev.append({"kind": "task_done", "t": now, "ref": "task:" + str(tid), "w": 0.25})
     st["seen_gates"] = sorted(seen)[-600:]
@@ -143,7 +152,7 @@ def drives_of(thr, panel, F, x, now):
     silence = x["silence_h"]; sat = C.clip(x["contact"] / 5.0)
     need = 1 - math.exp(-silence / 8.0)
     lv = {}
-    lv["ПОИСК"] = C.clip(0.15 + 0.45 * panel["ACh"] + 0.30 * x["novelty"] - 0.25 * F)
+    lv["ПОИСК"] = min(0.85, C.clip(0.15 + 0.45 * panel["ACh"] + 0.30 * x["novelty"] - 0.25 * F + 0.20 * x.get("hunger", 0.0)))  # голод усиливает ПОИСК, потолок 0.85
     quiet = C.in_quiet(now)
     lv["ИГРА"] = C.clip(0.55 * (1 - F) * (1 - panel["CORT"] / CORT_CAP) * (0.0 if quiet else 1.0) * (1 - 0.5 * x["train"]) + 0.15 * x["boredom"])
     lv["ЗАБОТА"] = C.clip(0.25 + 0.40 * x["neg_valence"] + 0.35 * x["pressure"] + 0.10 * C.clip(silence / 24.0))
@@ -158,6 +167,7 @@ def drives_of(thr, panel, F, x, now):
     D["ТРЕВОГА"] = {"level": round(lv["ТРЕВОГА"], 3), "ceiling": ceil_t, "capped": raw_t > ceil_t, "active": lv["ТРЕВОГА"] >= 0.5 * ceil_t}
     D["boredom"] = round(x["boredom"], 3)
     return D
+def dt_min(t): return int(time.strftime('%M', time.gmtime(t)))
 def decay(w0, age_s): return w0 * 0.5 ** (age_s / (HALF_MIN * 60.0))
 # ---------------------------------------------------------------- тик
 def tick(r=None, now=None, gpu=None, write=True, host=None):
@@ -175,7 +185,7 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
     plist = st.setdefault("progress", [])
     for e in ev: plist.append({"t": e["t"], "w": e["w"], "kind": e["kind"], "ref": e["ref"]})
     st["progress"] = plist = [p for p in plist if now - p["t"] < 48 * 3600][-200:]
-    prog = sum(p["w"] * 0.5 ** ((now - p["t"]) / (PROGRESS_HALF_H * 3600)) for p in plist if p["kind"] in ("gate_accept", "adapter_accept", "task_done"))
+    prog = sum(p["w"] * 0.5 ** ((now - p["t"]) / (PROGRESS_HALF_H * 3600)) for p in plist if p["kind"] in ("gate_accept", "adapter_accept", "task_done", "absorbed"))
     fail = sum(p["w"] * 0.5 ** ((now - p["t"]) / (PROGRESS_HALF_H * 3600)) for p in plist if p["kind"] in ("rollback", "gate_reject"))
     stress_ev = C.clip(gate_errors(r, now) * 0.05)
     imps_new, last_owner = owner_feed(r, st, now)
@@ -186,6 +196,7 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
     boredom = C.clip(1 - st["gain_ema"] / 0.15) * idle if n_ep else 0.0
     novelty = C.clip(st["gain_ema"] * 2)
     veto_1h = sum(1 for e in ep if e.get("kind") == "veto" and now - e["_t"] <= 3600)
+    hv = C.load_json(C.S(r) + "/hunger_v2.json", {}) or {}; hq = C.load_json(C.S(r) + "/morning_queue.json", {}) or {}
     sdt = C.load_json(C.M(r) + "/sdt.json", {}) or {}; sal = C.load_json(C.M(r) + "/salience.json", {}) or {}
     relatedness = float(sdt.get("relatedness", 0.35)); sal_f = float((sal.get("feelings") or {}).get("fatigue", 0.3))
     contact = contact_count(r, now)
@@ -195,15 +206,15 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
         cid = C.emit_signal(r, "owner_msg:" + i["name"], "pad_valence", i["v"], 2, src_ref=i["src_ref"], st=st, t=i["t"], reuse_s=0)
         imps.append({"name": i["name"], "occ": i["occ"], "v": i["v"], "a": i["a"], "d": i["d"], "t0": i["t"], "w0": i["w0"], "cause": cid, "src_ref": i["src_ref"]})
     for e in ev:  # события тела/обучения как импульсы
-        name, v, a = {"gate_accept": ("удовлетворение", 0.5, 0.3), "adapter_accept": ("удовлетворение", 0.8, 0.5), "task_done": ("удовлетворение", 0.3, 0.1),
+        name, v, a = {"gate_accept": ("гордость", 0.6, 0.4), "adapter_accept": ("гордость", 0.9, 0.5), "absorbed": ("удовлетворение", 0.8, 0.4), "task_done": ("удовлетворение", 0.3, 0.1),
                       "rollback": ("фрустрация", -0.5, 0.4), "gate_reject": ("фрустрация", -0.25, 0.2)}[e["kind"]]
-        occ = "OCC: желанное событие, подтверждённый прогресс (satisfaction)" if v > 0 else "OCC: нежеланное событие, провал ворот (disappointment): «Я ошибся. Исправляю.»"
+        occ = ("OCC: гордость (pride): одобрение собственного подтверждённого результата" if name == "гордость" else "OCC: желанное событие, подтверждённый прогресс (satisfaction)") if v > 0 else "OCC: нежеланное событие, провал ворот (disappointment): «Я ошибся. Исправляю.»"
         cid = C.emit_signal(r, "train:" + e["kind"], "event_w", e["w"], 3 if v < 0 else 2, src_ref=e["ref"], st=st, t=e["t"], reuse_s=0)
         imps.append({"name": name, "occ": occ, "v": v, "a": a, "d": 0.0, "t0": e["t"], "w0": 0.4 + e["w"] * 0.6, "cause": cid, "src_ref": e["ref"]})
     st["impulses"] = imps = [i for i in imps if decay(i["w0"], now - i["t0"]) > 0.03][-60:]
     neg_valence = C.clip(-sum(i["v"] * decay(i["w0"], now - i["t0"]) for i in imps if i["v"] < 0 and i["src_ref"].startswith("aff_")))
     x = {"heat": heat, "vram": vram, "pressure": pressure, "fail": fail, "stress_ev": stress_ev, "progress": prog, "train": train, "relatedness": relatedness, "contact": contact,
-         "novelty": novelty, "silence_h": silence_h, "boredom": boredom, "neg_valence": neg_valence, "veto_1h": veto_1h, "F_in": 0.0}
+         "novelty": novelty, "silence_h": silence_h, "boredom": boredom, "neg_valence": neg_valence, "veto_1h": veto_1h, "F_in": 0.0, "hunger": float(hv.get("norm", 0.0))}
     st["load_ema"] = 0.97 * st.get("load_ema", 0.3) + 0.03 * C.clip(max(gpu["util"] / 100.0, host.get("load1_per_core", 0.0)))
     night_rest = 2 <= C.msk_hour(now) < 5
     pnl0 = panel_of(dict(x, F_in=sal_f)); fat = fatigue_of(sal_f, st["load_ema"], pnl0["CORT"], night_rest)
@@ -218,6 +229,8 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
     if drv["СВЯЗЬ"]["active"] and silence_h > 6: cont.append(("скучал", C.clip(drv["СВЯЗЬ"]["level"]), "OCC: желанного события нет долго (СВЯЗЬ), без тоски: потолок", "silence_h", "silence_h", silence_h, 2, (-0.1, -0.05, -0.05)))
     if drv["ПОИСК"]["active"]: cont.append(("любопытство", C.clip(drv["ПОИСК"]["level"] - 0.3), "OCC: интерес, прирост понимания (ПОИСК)", "drive_poisk", "level", drv["ПОИСК"]["level"], 1, (0.25, 0.3, 0.1)))
     if boredom > 0.6: cont.append(("скука", boredom * 0.7, "прирост понимания упал: смена темы", "boredom", "boredom", boredom, 1, (-0.1, -0.2, 0.0)))
+    HL = {"нужны данные": 0.25, "активный поиск": 0.4, "голодаю": 0.55}
+    if hv.get("level") in HL: cont.append(("голод", min(0.6, HL[hv["level"]] + 0.05 * x["hunger"]), "OCC: желание знания (ПОИСК с потолком), не боль", "hunger", "hours", float(hv.get("hours", 0.0)), 1, (-0.05, 0.15, 0.05)))
     states = []
     for name, inten, occ, sid, met, val, sev, (cv, ca, cd) in cont:
         cid = C.emit_signal(r, sid, met, val, sev, st=st, t=now, reuse_s=3600, reuse_dv=0.08)
@@ -230,6 +243,14 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
         if d.get("kind") == "feeling" and now - C.parse_ts(d.get("ts")) < 3 * 3600:
             w = C.clip((d.get("sev") or 2) / 5.0) * 0.5 ** ((now - C.parse_ts(d.get("ts"))) / 3600.0)
             states.append({"name": "ощущение тела:" + str(d.get("sid")), "intensity": round(w, 3), "occ": "сенсориум", "cause": d.get("id") or C.legacy_ref(d), "v": -0.1 * w, "a": 0.1 * w, "d": 0.0, "kind": "sensor"}); break
+    grat = None; hm = C.msk_hour(now) + dt_min(now) / 60.0
+    if 21.5 <= hm < 23.5:
+        day0 = now - ((C.msk_hour(now) * 60 + dt_min(now)) * 60)
+        pos = [d for d in C.jl_tail(C.S(r) + "/journal.jsonl", 400) if d.get("kind") == "organism" and C.parse_ts(d.get("ts")) >= day0 and str(d.get("sid", "")).startswith(("train:gate_accept", "train:adapter_accept", "train:task_done", "owner_msg:радость"))]
+        if pos:
+            cid = C.emit_signal(r, "gratitude", "events_today", len(pos), 1, src_ref=pos[-1]["id"], st=st, t=now, reuse_s=3600, reuse_dv=0.5)
+            grat = {"text": "Благодарен Создателю: за сегодня %d подтверждённых событий роста или тёплых реплик." % len(pos), "cause": cid, "events": len(pos)}
+            states.append({"name": "благодарность", "intensity": 0.45, "occ": "OCC: благодарность (gratitude): желанный результат дня благодаря Создателю", "cause": cid, "v": 0.14, "a": 0.04, "d": -0.02, "kind": "body"})
     PV = C.clip(sum(s["v"] for s in states), -1, 1); PA = C.clip(sum(s["a"] for s in states), -1, 1); PD = C.clip(sum(s["d"] for s in states), -1, 1)
     states.sort(key=lambda s: -s["intensity"])
     top = None
@@ -242,6 +263,7 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
            "fatigue": dict(fat, boredom=round(boredom, 3), topic_switch=boredom > 0.6),
            "top_feeling": top,
            "last_talk": {"hours_ago": last_h, "ts": C.iso_msk(last_owner) if last_owner else None, "text": ("последний разговор %.1f ч назад" % last_h) if last_h is not None else "последний разговор: нет данных"},
+           "hunger": {"level": hv.get("level"), "hours": hv.get("hours"), "phrase": hv.get("phrase"), "norm": hv.get("norm")}, "hunt_queue": {"pending": hq.get("pending", 0), "asks": hq.get("asks", [])}, "gratitude": grat,
            "inputs": {"gpu": {k: (round(v, 1) if isinstance(v, float) else v) for k, v in gpu.items()}, "disk_free_gb": round(disk, 1), "heat": round(heat, 3), "pressure": round(pressure, 3), "progress": round(prog, 3), "fail": round(fail, 3),
                       "stress_ev": round(stress_ev, 3), "contact_2h": contact, "gain": round(gain, 3), "veto_1h": veto_1h, "sal_fatigue": sal_f, "relatedness": relatedness}}
     if write:
@@ -251,7 +273,7 @@ def tick(r=None, now=None, gpu=None, write=True, host=None):
                                                     "drives": {k: v["level"] for k, v in drv.items() if isinstance(v, dict)}, "top": (top or {}).get("name"), "cause": (top or {}).get("cause")}, cap_bytes=3_000_000)
         patch_self_now(r, out)
     return out
-SN_KEYS = ("panel", "drives", "pad", "fatigue", "top_feeling", "last_talk")
+SN_KEYS = ("panel", "drives", "pad", "fatigue", "top_feeling", "last_talk", "hunger", "hunt_queue", "gratitude")
 def patch_self_now(r, out):
     """Дописывает ключи организма в self_now.json; старые поля сохраняются; битый файл не перезаписываем."""
     p = C.S(r) + "/self_now.json"
