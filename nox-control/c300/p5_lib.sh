@@ -7,7 +7,7 @@ curl -fsSL $RAW/p5_bench.py -o /tmp/p5_bench.py; curl -fsSL $RAW/p5_cmp.py -o /t
 echo "base_md5=$(md5sum < $BASE | cut -c1-8) running_ncmoe=$(ps -eo args | grep 'llama-server.*--port 8104' | grep -v grep | grep -o 'n-cpu-moe [0-9]*' | head -1)"
 GPUOTHER=$(nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader,nounits | grep -v "^$(ss -ltnp | grep ':8104 ' | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)," | awk -F, '{s+=$2} END{print s+0}')
 echo "gpu_other_mib=$GPUOTHER"
-if [ "${FORCE_P5:-0}" != 1 ] && [ "$GPUOTHER" -gt 1500 ]; then echo "ABORT train_active_on_gpu"; echo END; exit 0; fi
+if [ "${FORCE_P5:-0}" != 1 ] && pgrep -f "train_dpo.py|distill_v2.py train" >/dev/null; then echo "ABORT train_active_on_gpu"; echo END; exit 0; fi
 python3 - "$BASE" "$NEW" "$MODS" <<'PY'
 import sys, ast
 src, dst, mods = sys.argv[1], sys.argv[2], ast.literal_eval(sys.argv[3])
