@@ -5,4 +5,4 @@ cp -a $N/mods/weekly_exam.py $N/mods/weekly_exam.py.bak_e7 2>/dev/null; cp $W/we
 python3 -I $N/mods/ece_calc.py | cut -c1-200
 supervisorctl restart nox_weekly_exam 2>&1 | tail -1
 echo "brief writers:"; grep -rl "morning_brief_v5" $N --include=*.py --include=*.sh 2>/dev/null | grep -v -E "\.bak|archive|node_modules|api_bridge" | head -5
-rm -f $N/state/core/exam_run.out; (setsid nohup nice -n 5 env NOX_ROOT=$N python3 -I $N/mods/weekly_exam.py > $N/state/core/exam_run.out 2>&1 &) ; sleep 2; echo "first run started"; echo END
+echo skip_firstrun

@@ -289,7 +289,7 @@ def run(probe=True):
 def brief(o=None):
     """Строка для утренней сводки: state/mind/exam_brief.json + ключ exam в morning_brief_v5.json (api_bridge отдаёт файл как есть)."""
     o = o or jl(S + "/weekly_exam.json")
-    if not o: return
+    if not isinstance(o, dict) or not all(k in o for k in ("score", "rows", "passed", "measured", "ts")): return
     bad = [r["test"].split(" ")[0] for r in o["rows"] if r["pass"] == "FAIL"]; hold = [r["test"].split(" ")[0] for r in o["rows"] if r["pass"] == "HOLD"]
     line = "Экзамен живости %s/10 (пройдено %d из 13, измерено %d). Провал: %s. Ждут данных: %s." % (o["score"], o["passed"], o["measured"], ",".join(bad) or "нет", ",".join(hold) or "нет")
     d = {"ts": o["ts"], "score": o["score"], "line": line, "fail": bad, "hold": hold}
@@ -298,7 +298,7 @@ def brief(o=None):
         for f in ("morning_brief_v5.json",):
             b = jl(M + "/" + f)
             if isinstance(b, dict) and b.get("exam", {}).get("ts") != o["ts"]:
-                b["exam"] = d; tmp = M + "/" + f + ".tmp"; open(tmp, "w", encoding="utf-8").write(json.dumps(b, ensure_ascii=False)); os.replace(tmp, M + "/" + f)
+                b["exam"] = d; ln = [x for x in (b.get("lines") or []) if not str(x).startswith("Экзамен живости")]; b["lines"] = ln + [line]; tmp = M + "/" + f + ".tmp"; open(tmp, "w", encoding="utf-8").write(json.dumps(b, ensure_ascii=False)); os.replace(tmp, M + "/" + f)
     except Exception: pass
 def daemon():
     while True:
