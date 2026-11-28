@@ -266,6 +266,30 @@ def asof(user, ts, tx=None, pred=None):
         return [{"id": r[0], "pred": r[1], "obj": r[2], "pol": r[3], "valid_from": r[4], "valid_to": r[5]} for r in c.execute(sql + " order by t.valid_from", a)]
     finally: c.close()
 
+def scan_conflicts(user=None, apply=False):
+    """retro-scan of active facts: same (user,pred) different single-valued obj, or likes polarity flip. Dry by default (counts only)."""
+    c = conn(); n = 0; made = []
+    try:
+        us = [user] if user else [r[0] for r in c.execute("select distinct user from s03_mem where status='active'")]
+        for u in us:
+            rows = c.execute("select t.mem_id,t.pred,t.obj_key,t.pol,m.ts,s.text from m10_tfact t join s03_mem m on m.id=t.mem_id join s03 s on s.id=t.mem_id where t.user=? and m.status='active' and t.tx_to is null and t.valid_to is null order by m.ts", (u,)).fetchall()
+            for a in range(len(rows)):
+                for b in range(a + 1, len(rows)):
+                    o, w = rows[a], rows[b]
+                    if o[1] != w[1] or o[0] == w[0]: continue
+                    single = o[1] in L.SINGLE or o[1].startswith("pet_name:")
+                    if not ((single and o[2] != w[2]) or (o[1] == "likes" and o[2] == w[2] and o[3] != w[3])): continue
+                    if c.execute("select 1 from m10_conflicts where (new_id=? and old_id=?) or (new_id=? and old_id=?)", (w[0], o[0], o[0], w[0])).fetchone(): continue
+                    n += 1; made.append((u, w, o))
+        if apply:
+            with LOCK:
+                for u, w, o in made:
+                    c.execute("insert into m10_conflicts(ts,user,new_id,old_id,kind,pred,question) values(?,?,?,?,?,?,?)", (time.time(), u, w[0], o[0], "slot" if o[1] != "likes" else "polarity", o[1], L.question(o[5] or "", w[5] or "", o[4], w[4], u)))
+                c.commit()
+    finally: c.close()
+    if apply and made: _write_questions()
+    return {"found": n, "applied": bool(apply)}
+
 def goal_vecs():
     c = conn(); g = [r[0] for r in c.execute("select text from m10_goals")]; c.close()
     try:
@@ -398,6 +422,7 @@ class H(BaseHTTPRequestHandler):
                 return self._j({"items": [dict(zip(("id", "ts", "user", "new_id", "old_id", "kind", "pred", "status", "question"), r)) for r in rows]})
             if p == "/conflict/resolve": return self._j(resolve(int(b["id"]), str(b.get("keep")), bool(b.get("wrong"))))
             if p == "/asof": return self._j({"items": asof(user, float(b.get("ts") or time.time()), float(b["tx"]) if b.get("tx") else None, b.get("pred"))})
+            if p == "/scan_conflicts": return self._j(scan_conflicts(b.get("user"), bool(b.get("apply"))))
             if p == "/forget_pass": return self._j(forget_pass(bool(b.get("apply")) and not b.get("dry", True), float(b["now"]) if b.get("now") else None))
         except Exception as e:
             import traceback; print(traceback.format_exc()[-600:], flush=True); return self._j({"error": type(e).__name__}, 500)
