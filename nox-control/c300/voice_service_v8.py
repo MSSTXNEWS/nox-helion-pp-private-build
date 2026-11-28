@@ -188,7 +188,7 @@ class Mic:
     def __init__(self, cid, user):
         import queue
         self.cid, self.user = cid, user; self.q = queue.Queue(); self.ev = []; self.n = 0; self.lock = threading.Condition(); self.sid = None; self.busy = False
-        self.partial = ""; self.t_eou = None; self.turn = False; self.last = time.time(); self.vad = Vad(); self.vad.EOU = EOU_FR
+        self.partial = ""; self.utt = bytearray(); self.pre = bytearray(); self.last_part = 0.0; self.t_eou = None; self.turn = False; self.last = time.time(); self.vad = Vad(); self.vad.EOU = EOU_FR
         threading.Thread(target=self.work, daemon=True).start()
     def push(self, o):
         with self.lock:
@@ -205,22 +205,28 @@ class Mic:
             run_turn(self.push, s, cid, self.user, text, t0, filler_at=-1 if fd else None); self.turn = False
         threading.Thread(target=go, daemon=True).start()
     filler_done = False
+    def wav(self, pcm):
+        b = io.BytesIO(); w = wave.open(b, "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(pcm); w.close(); return b.getvalue()
+    def tr(self, pcm):
+        return str(self._stt("/transcribe?language=ru", self.wav(pcm), "audio/wav").get("text") or "").strip()
+    def partial_job(self, pcm):
+        try:
+            t = self.tr(pcm)
+            if t and t != self.partial and not self.turn: self.partial = t; self.push({"t": "partial", "text": t})
+        except Exception: pass
+        self.busy_p = False
     def work(self):
         import queue
         while time.time() - self.last < 120:
             try: kind, pcm = self.q.get(timeout=5)
             except queue.Empty: continue
             try:
-                if self.sid is None: self.sid = self._stt("/stream/start", json.dumps({"language": "ru", "partial": 0.5}).encode(), "application/json").get("id")
-                res = self._stt("/stream/%s/%s" % (self.sid, "finish" if kind == "finish" else "chunk"), pcm if kind == "chunk" else b"")
-                for e in res.get("events", []):
-                    if e.get("type") == "partial": self.partial = e.get("text", ""); self.push({"t": "partial", "text": self.partial})
-                    elif e.get("type") == "final":
-                        txt = str(e.get("text") or "").strip(); self.partial = ""
-                        if txt: self.start_turn(txt)
-                if kind == "finish": self.busy = False
-            except Exception as e: self.push({"t": "error", "error": str(e)[:100]}); self.busy = False
+                txt = self.tr(pcm); self.partial = ""
+                if txt: self.start_turn(txt)
+            except Exception as e: self.push({"t": "error", "error": str(e)[:100]})
+            self.busy = False
         MIC.pop(self.cid, None)
+    busy_p = False
 def mic_frames(cid, user, raw):
     m = MIC.get(cid)
     if m is None: m = MIC[cid] = Mic(cid, user)
@@ -231,12 +237,20 @@ def mic_frames(cid, user, raw):
         stop_turn(cid); s["done"].wait(0.25); m.turn = False; pcm, sr = FIX.get(ACK) or tts_pcm(ACK, pad=False)
         o.update({"barge": True, "cancel_ms": int((time.time() - t_in) * 1000), "ack": ACK, "ack_sr": sr, "ack_pcm_b64": base64.b64encode(pcm).decode()})
         m.push({"t": "barge", "cancel_ms": o["cancel_ms"]})
-    if not m.turn: m.q.put(("chunk", raw))
-    if eou and not m.turn and not o["barge"]:
-        m.t_eou = time.time() - EOU_FR * 0.032; m.busy = True; m.q.put(("finish", b""))
-        if not E("NOX_NO_FILLER"):
-            f = FILLERS[int(time.time()) % len(FILLERS)]; pcm, sr = FIX.get(f) or tts_pcm(f, pad=False); m.filler_done = True
-            m.push({"t": "audio", "seq": -1, "sr": sr, "text": f, "filler": True, "pcm_b64": base64.b64encode(pcm).decode(), "after_eou_ms": int((time.time() - m.t_eou) * 1000)})
+    if v.inspeech or eou:
+        if not m.utt: m.utt = bytearray(m.pre)
+        m.utt += raw
+        if v.inspeech and not m.busy_p and time.time() - m.last_part > 0.8 and len(m.utt) > 16000:
+            m.last_part = time.time(); m.busy_p = True; threading.Thread(target=m.partial_job, args=(bytes(m.utt),), daemon=True).start()
+    else:
+        m.pre += raw; del m.pre[:-16000]
+    if eou and not o["barge"]:
+        u = bytes(m.utt); m.utt = bytearray(); m.pre = bytearray()
+        if not m.turn and len(u) > 9600:
+            m.t_eou = time.time() - EOU_FR * 0.032; m.busy = True; m.q.put(("final", u))
+            if not E("NOX_NO_FILLER"):
+                f = FILLERS[int(time.time()) % len(FILLERS)]; pcm, sr = FIX.get(f) or tts_pcm(f, pad=False); m.filler_done = True
+                m.push({"t": "audio", "seq": -1, "sr": sr, "text": f, "filler": True, "pcm_b64": base64.b64encode(pcm).decode(), "after_eou_ms": int((time.time() - m.t_eou) * 1000)})
     return o
 def mic_events(cid, after, wait=15):
     m = MIC.get(cid)

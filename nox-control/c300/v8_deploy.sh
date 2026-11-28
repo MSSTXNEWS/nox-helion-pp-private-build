@@ -1,7 +1,7 @@
 echo "K1: v8_deploy"
 N=/workspace/nox; U=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/main/nox-control/c300
 PY=$N/voice/venv/bin/python; TS=$(date +%s); NEW=/tmp/v8_voice_service.py; CONF=/etc/supervisor/conf.d/nox_voice.conf
-SHA_EXPECT=98a54eadac04c682f03cdce164651200294f7070c7c08f3b55ffe7da03b48114
+SHA_EXPECT=b5dd39233a279cfa619bbd766057fbcae65a749d6c9be828e74d5ceb5aba3059
 curl -fsSL "$U/voice_service_v8.py?x=$RANDOM" -o $NEW || { echo "fetch fail"; exit 1; }
 [ "$(sha256sum $NEW | cut -c1-64)" = "$SHA_EXPECT" ] || { echo "sha mismatch"; exit 1; }
 $PY -m py_compile $NEW || { echo "syntax fail"; exit 1; }
