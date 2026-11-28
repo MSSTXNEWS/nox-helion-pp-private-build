@@ -59,12 +59,11 @@ for p in pairs:
     if k in seen: drops["dup"] += 1; continue
     seen.add(k); keep.append(p)
 random.Random(2814).shuffle(keep)
-ne = max(30, len(keep) // 20); ev, tr = keep[:ne], keep[ne:]
-# eval не должен делить prompt с train
-tp = {sha(p["prompt"][-1]["content"]) for p in tr}; ev2 = []
-for p in ev:
-    if sha(p["prompt"][-1]["content"]) in tp: tr.append(p)
-    else: ev2.append(p)
+groups = collections.defaultdict(list)
+for p in keep: groups[sha(p["prompt"][-1]["content"])].append(p)
+keys = sorted(groups); random.Random(2815).shuffle(keys)
+nk = max(12, len(keys) // 20); ev2 = [p for k in keys[:nk] for p in groups[k]]; tr = [p for k in keys[nk:] for p in groups[k]]
+random.Random(2816).shuffle(tr)
 for name, arr in (("dpo_pers1_train.jsonl", tr), ("dpo_pers1_eval.jsonl", ev2)):
     with open(D + "/" + name, "w", encoding="utf-8") as f:
         for p in arr: f.write(json.dumps(p, ensure_ascii=False) + "\n")
