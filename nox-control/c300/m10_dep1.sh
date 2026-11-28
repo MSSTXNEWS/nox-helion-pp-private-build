@@ -29,7 +29,7 @@ HB=$(grep "^BENCH before" $W/before.txt | sed 's/.*hit@4=\([0-9.]*\).*/\1/'); HA
 echo "gate: hit_before=$HB hit_after=$HA test_fails=$FAILS"
 cp $W/new/m10_logic.py $W/new/m10_cite.py $W/new/nox_mem.py $W/new/s03_m10.json /tmp/ 2>/dev/null
 pkill -f "$W/"; sleep 1
-if [ "$FAILS" != "0" ] || [ "$(echo "$HA >= $HB" | bc -l)" != "1" ]; then echo "GATE_FAIL abort, prod untouched"; rm -rf $W; echo END; exit 0; fi
+if [ "$FAILS" != "0" ] || [ "$(python3 -c "print(int(float('$HA')>=float('$HB')))")" != "1" ]; then echo "GATE_FAIL abort, prod untouched"; rm -rf $W; echo END; exit 0; fi
 D=$N/svc/mem; BK=$N/state/core/backup_m10; mkdir -p $BK; TS=$(date +%Y%m%d_%H%M%S)
 $V/bin/python -I - <<PY
 import sqlite3
@@ -42,7 +42,7 @@ OK=0; for i in $(seq 1 30); do curl -s -m 2 127.0.0.1:18220/health | grep -q '"v
 echo "health_ok=$OK"; curl -s -m 3 127.0.0.1:18220/health; echo
 rb() { cp -a $D/nox_mem.py.bak_m10 $D/nox_mem.py; supervisorctl restart nox_mem 2>&1 | tail -1; echo "ROLLED_BACK: $1"; }
 [ "$OK" = 1 ] || { rb health; rm -rf $W; echo END; exit 0; }
-$V/bin/python -I - <<'PY'
+$V/bin/python -I - > /tmp/m10_smoke.txt 2>&1 <<'PY'
 import json,time,urllib.request as ur,sqlite3
 def P(p,o,t=10):
     return json.loads(ur.urlopen(ur.Request("http://127.0.0.1:18220"+p,data=json.dumps(o).encode(),headers={"Content-Type":"application/json"}),timeout=t).read())
@@ -61,7 +61,8 @@ c=sqlite3.connect("file:/workspace/nox/state/core/s03.db?mode=ro",uri=True)
 print("integrity",c.execute("pragma integrity_check").fetchone()[0],"s03_rows",c.execute("select count(*) from s03").fetchone()[0],"prov_null",c.execute("select count(*) from s03_mem where prov is null").fetchone()[0],"triggers",c.execute("select count(*) from sqlite_master where type='trigger' and name in ('s03_nodel','s03_noupd')").fetchone()[0])
 print("bad",bad)
 PY
-SMOKE_BAD=$($V/bin/python -I -c "print(0)")
+cat /tmp/m10_smoke.txt
+{ grep -q '^bad 0' /tmp/m10_smoke.txt && grep -q 'integrity ok' /tmp/m10_smoke.txt; } || { rb smoke; rm -rf $W; echo END; exit 0; }
 supervisorctl status nox_mem nox_rerank | awk '{print $1,$2}'
 curl -s -m 3 127.0.0.1:18220/health; echo
 rm -rf $W; echo deployed; echo END
