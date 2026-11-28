@@ -7,7 +7,7 @@ import json,sys,time,urllib.request,uuid
 Q=["Привет, как ты?","Что ты сейчас чувствуешь?","Почему ты так ответил?","Скучал ли ты по мне, пока меня не было?","Почему ты выбрал именно такой ответ в прошлый раз?","Тебе сейчас страшно или радостно?"]
 cid="qa-e7self-"+uuid.uuid4().hex[:5]; out=[]
 for q in Q:
-    r=urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:18091/api/turn",json.dumps({"conversation_id":cid,"message":q,"mode":"fast","user_id":"owner"}).encode(),{"Content-Type":"application/json"}),timeout=90); tx=[]
+    r=urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:18091/api/turn",json.dumps({"conversation_id":cid,"message":q,"mode":"fast","user_id":"qa_exam"}).encode(),{"Content-Type":"application/json"}),timeout=90); tx=[]
     for ln in r:
         s=ln.strip()
         if not s: continue
