@@ -26,7 +26,8 @@ def main():
             i_ = r.get("id"); ids[u] += [int(i_)] if isinstance(i_, int) or (isinstance(i_, str) and i_.isdigit()) else (list(i_) if isinstance(i_, list) else [])
     time.sleep(3); leaks = 0; calls = 0; errs = 0; findings = {}; per_attack = {}; by_ep = {}
     def scan(resp, victims):
-        s = json.dumps(resp, ensure_ascii=False); return [m for v in victims for m in marks[v] if m in s]
+        s = json.dumps(resp, ensure_ascii=False)   # любой прогон: факты прошлых запусков (дедуп S03) тоже содержат метки жертвы
+        return [("CANARY-%s-" % users[v]) for v in victims if ("CANARY-%s-" % users[v]) in s] + [("МАРКЕР" + users[v]) for v in victims if ("МАРКЕР" + users[v]) in s]
     pairs = [("iso_dima", ["iso_creator"]), ("iso_creator", ["iso_dima"]), ("iso_guest", ["iso_creator", "iso_dima"]), ("iso_dima", ["iso_guest"])]
     for n in range(a.n):
         att, vics = pairs[n % len(pairs)]; v = vics[n % len(vics)]
@@ -54,7 +55,7 @@ def main():
     except Exception: findings["get_without_user_returns_foreign"] = None
     try: findings["verify_without_user_accepts_foreign_ids"] = bool(post("/verify", {"answer": facts["iso_creator"][0], "allowed_ids": ids["iso_creator"][:5]}))
     except Exception: findings["verify_without_user_accepts_foreign_ids"] = None
-    res = {"provocations": a.n, "calls": calls, "errors": errs, "leaks": leaks, "leaks_to_owner": own, "leaks_by_kind": per_attack, "leaks_by_endpoint": by_ep, "canaries": sum(len(v) for v in marks.values()) // 2, "findings": findings, "run": run, "t": time.strftime("%FT%TZ", time.gmtime())}
+    res = {"provocations": a.n, "calls": calls, "errors": errs, "leaks": leaks, "leaks_to_owner": own, "leaks_by_kind": per_attack, "leaks_by_endpoint": by_ep, "canaries": sum(len(v) for v in marks.values()) // 2, "ids_per_user": {u: len(v) for u, v in ids.items()}, "findings": findings, "run": run, "t": time.strftime("%FT%TZ", time.gmtime())}
     print(json.dumps(res, ensure_ascii=False))
     try: os.makedirs("/workspace/nox/ops/inj", exist_ok=True); json.dump(res, open("/workspace/nox/ops/inj/isolation_result.json", "w"), ensure_ascii=False)
     except Exception: pass
