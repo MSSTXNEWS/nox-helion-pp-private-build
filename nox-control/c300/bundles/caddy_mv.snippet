@@ -1,0 +1,19 @@
+	# музыка: генерация до нескольких минут, буфер выключен; страница music.jsx делает OPTIONS /music/gen и POST /music/gen
+	handle /music/gen {
+		reverse_proxy 127.0.0.1:18801 {
+			flush_interval -1
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 900s
+			}
+		}
+	}
+	# видео: асинхронно (POST /video/gen -> id; GET /video/job/<id>; GET /video/file/<id>)
+	handle /video/* {
+		reverse_proxy 127.0.0.1:18802 {
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 60s
+			}
+		}
+	}
