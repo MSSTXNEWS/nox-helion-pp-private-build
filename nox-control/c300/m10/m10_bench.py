@@ -74,23 +74,23 @@ def run(url, user, label, sweep=False):
         negd = []
         for q in NEG:
             r = P(url, "/recall", {"q": q, "user": user, "k": 4, "debug": True}); negd.append(r.get("debug") or [])
-        def sel(dbg, ab, sm, rl):
+        def sel(dbg, ab, sm, rl, lx=0):
             top = max([x[1] for x in dbg], default=0)
-            if not (top >= ab or max([x[2] for x in dbg], default=0) >= sm): return []
+            if not (top >= ab or max([x[2] for x in dbg], default=0) >= sm or (lx and any(x[3] for x in dbg))): return []
             return [x[0] for x in dbg if (x[1] >= rl * top) or x[2] >= 0.8][:4]
         grid = []
-        for ab in (0.0, 0.0005, 0.001, 0.002, 0.003, 0.005, 0.01, 0.03):
-            for sm in (0.0, 0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7):
-                for rl in (0.1, 0.25, 0.4):
+        for ab in (0.003, 0.01, 0.02, 0.03, 0.05, 0.08, 0.15, 1.0):
+            for sm in (0.6, 0.7, 0.75, 0.8, 0.9, 1.1):
+                for rl, lx in ((r_, l_) for r_ in (0.1, 0.25, 0.4) for l_ in (0, 1)):
                     h = rt = 0
                     for g, ids, dbg, _ in res:
-                        sl = sel(dbg, ab, sm, rl); h += g in sl; rt += len(sl)
-                    ne = sum(1 for d in negd if not sel(d, ab, sm, rl))
+                        sl = sel(dbg, ab, sm, rl, lx); h += g in sl; rt += len(sl)
+                    ne = sum(1 for d in negd if not sel(d, ab, sm, rl, lx))
                     hr = h / float(len(D)); pr = h / float(rt) if rt else 0.0; nr = ne / float(len(NEG))
-                    grid.append((hr * pr * (0.5 + 0.5 * nr) + 0.0001 * (ab + sm), ab, sm, rl, hr, pr, nr, rt))
+                    grid.append((hr * pr * (0.4 + 0.6 * nr) + 0.0001 * (ab + sm), ab, sm, rl, lx, hr, pr, nr, rt))
         grid.sort(reverse=True)
-        for g in grid[:6]: print("GRID J=%.3f abs=%s simmin=%s rel=%s hit=%.3f prec=%.3f neg_empty=%.2f ret=%d" % g)
-        g = grid[0]; print("BEST_CFG " + json.dumps({"abs": g[1], "simmin": g[2], "rel": g[3]}))
+        for g in grid[:6]: print("GRID J=%.3f abs=%s simmin=%s rel=%s lex=%s hit=%.3f prec=%.3f neg_empty=%.2f ret=%d" % g)
+        g = grid[0]; print("BEST_CFG " + json.dumps({"abs": g[1], "simmin": g[2], "rel": g[3], "lex": g[4]}))
         # score stats
         gs = sorted(x[1] for _, _, dbg, _ in res for x in dbg[:1]); print("TOPSCORE_POS median=%.4f min=%.4f" % (gs[len(gs)//2], gs[0]))
         ns = sorted(max([x[1] for x in d], default=0) for d in negd); print("TOPSCORE_NEG median=%.4f max=%.4f" % (ns[len(ns)//2], ns[-1]))

@@ -58,7 +58,7 @@ def post(url, obj, timeout):
     with ur.urlopen(rq, timeout=timeout) as r: return json.loads(r.read())
 def embed(texts, timeout=2.0): return post(EMB, {"texts": texts}, timeout)["vectors"]
 def blob(v): return struct.pack("%df" % len(v), *v)
-CFG_DEF = {"abs": 0.003, "simmin": 0.45, "rel": 0.25}
+CFG_DEF = {"abs": 0.03, "simmin": 0.7, "rel": 0.4, "lex": 0}
 def _cfg():
     try: d = dict(CFG_DEF); d.update(json.load(open(STATE + "/s03_m10.json"))); return d
     except Exception: return dict(CFG_DEF)
@@ -101,7 +101,7 @@ def recall(q, user, k=K_OUT, debug=False):
         best = sorted(zip(sc, cand, docs), key=lambda x: ((x[1] in set(win)) if win else 0, x[0]), reverse=True)   # time-anchored question: window items first
         top = max([x[0] for x in best] or [0]) if best else 0; thr = float(open(STATE + "/s03_sim").read()) if os.path.exists(STATE + "/s03_sim") else 0.80
         cf = _cfg(); winset = set(win)
-        gate = (not reranked) or top >= cf["abs"] or max([sim.get(i, 0.0) for i in cand] or [0]) >= cf["simmin"] or bool(winset)
+        gate = (not reranked) or top >= cf["abs"] or max([sim.get(i, 0.0) for i in cand] or [0]) >= cf["simmin"] or bool(winset) or (cf.get("lex") and bool(fts))
         dbg = [(i, round(s, 4), round(sim.get(i, -1), 3), i in fts, i in winset) for s, i, _ in best[:12]] if debug else []
         out = [(round(s, 3), i, d, round(sim.get(i, 0.0), 3)) for s, i, d in best if gate and ((s >= cf["rel"] * top) or sim.get(i, 0) >= thr or i in winset)][:(max(k, 6) if winset else k)]
         return out, int((time.time() - t0) * 1000), dbg
