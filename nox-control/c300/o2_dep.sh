@@ -4,7 +4,7 @@ B=https://raw.githubusercontent.com/MSSTXNEWS/nox-helion-pp-private-build/${REF:
 W=$(mktemp -d); F="nox_org_common nox_ledger nox_organism nox_sleep nox_absorb nox_predator nox_bus nox_dispatch nox_board nox_hands test_nox_organism test_nox_predator test_nox_hands"
 for f in $F; do curl -fsS -m 30 "$B/$f.py?cb=$cb" -o $W/$f.py || { echo "FETCH_FAIL $f"; echo END; exit 0; }; python3 -m py_compile $W/$f.py || { echo "COMPILE_FAIL $f"; echo END; exit 0; }; done
 cp $M/autonomy.py $W/autonomy.py
-R=$(cd $W && python3 -W ignore -m unittest test_nox_hands test_nox_predator test_nox_organism 2>&1 | tail -3); echo "$R"; echo "$R" | grep -q "^OK" || { echo "TESTS_FAIL abort"; echo END; exit 0; }
+R=$(cd $W && python3 -W ignore -m unittest test_nox_hands test_nox_predator test_nox_organism 2>&1 | tail -45); echo "$R" | cut -c1-200; echo "$R" | grep -q "^OK$" || { echo "TESTS_FAIL abort"; echo END; exit 0; }
 echo "before: tasks_queued=$(grep -l '"status": "queued"' $T/*.json 2>/dev/null | wc -l) receipts=$(ls $N/state/receipts | wc -l) bus_events=$(python3 -c "import sqlite3;print(sqlite3.connect('file:$N/state/bus/events.db?mode=ro',uri=True).execute('select max(seq) from events').fetchone()[0])") disk=$(df -BM /workspace|tail -1|awk '{print $4}')"
 for f in nox_bus nox_dispatch nox_board nox_hands test_nox_hands; do cp $M/$f.py $M/$f.py.bak_o2 2>/dev/null; cp $W/$f.py $M/$f.py; done
 D=/etc/supervisor/conf.d
