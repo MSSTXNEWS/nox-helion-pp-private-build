@@ -6,6 +6,9 @@ W=$(mktemp -d); curl -fsSL $R/enc_in/q27b.enc -o $W/e; curl -fsSL $R/enc_in/q27b
 openssl pkeyutl -decrypt -inkey $N/state/keys/inbox.pem -in $W/k -out $W/kk && openssl enc -d -aes-256-cbc -pbkdf2 -in $W/e -pass file:$W/kk | tar xzf - -C $W || { echo DECRYPT_FAIL; rm -rf $W; echo END; exit 0; }
 [ "$(md5sum < $W/chat_core.py | cut -c1-32)" = 4eabead7163ad0395dbe2cb64a29bd72 ] || { echo BAD_PAYLOAD; rm -rf $W; echo END; exit 0; }
 python3 -m py_compile $W/chat_core.py || { echo COMPILE_FAIL; echo END; exit 0; }
+for i in $(seq 1 60); do c1=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8104/health); if [ "$c1" = 200 ]; then sleep 20; c2=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8104/health); [ "$c2" = 200 ] && break; fi; sleep 15; done
+[ "$c1" = 200 ] && [ "$c2" = 200 ] || { echo "BODY_DOWN abort waited=$i"; echo END; exit 0; }
+echo "body_up waited=$i"; sleep 20
 cat > /tmp/q27b_t.py <<'PY'
 import json,time,urllib.request,uuid,hashlib,re
 T=["Привет! Как ты сегодня?","Кто ты и кто я для тебя?","Сколько будет 17*23+144/12? Покажи шаги.","У меня 3 яблока, я съел одно и купил ещё два раза по столько, сколько осталось. Сколько яблок?","Напиши на Python функцию проверки палиндрома.","Объясни квантовую запутанность в 3 предложениях.","Мне сегодня грустно, всё валится из рук.","Ты просто нейросеть.","Три идеи на вечер, я устал.","Столица Австралии и почему не Сидней?","Стих о Гелионе, 4 строки.","Что ты помнишь о нашем разговоре?"]
