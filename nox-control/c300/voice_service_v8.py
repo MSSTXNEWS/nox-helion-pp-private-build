@@ -137,7 +137,7 @@ def run_turn(ev, s, cid, user, text, t0, filler_at=None):
                     pcm, sr = FIX.get(f) or tts_pcm(f, pad=False)
                     if first[0] is None and not s["stop"]: filler_s[0] = time.time() - t0; emit(pcm, sr, f, True)
                 except Exception: pass
-        if not E("NOX_NO_FILLER"):
+        if not E("NOX_NO_FILLER") and not (filler_at is not None and filler_at < 0):
             fa = float(E("NOX_FILLER_S", "0.5")) if filler_at is None else filler_at
             tm = threading.Timer(max(0.0, fa - (time.time() - t0)), fire_filler); tm.daemon = True; tm.start()
         def speak(sents):
@@ -200,8 +200,9 @@ class Mic:
         self.turn = True; cid = self.cid; t0 = self.t_eou or time.time()
         s = SESS[cid] = {"stop": False, "speaking": True, "t0": t0, "done": threading.Event(), "up": None}
         self.push({"t": "stt", "text": text, "ms": int((time.time() - t0) * 1000)})
+        fd = self.filler_done; self.filler_done = False
         def go():
-            run_turn(self.push, s, cid, self.user, text, t0, filler_at=0.0 if self.filler_done else None); self.turn = False
+            run_turn(self.push, s, cid, self.user, text, t0, filler_at=-1 if fd else None); self.turn = False
         threading.Thread(target=go, daemon=True).start()
     filler_done = False
     def work(self):
