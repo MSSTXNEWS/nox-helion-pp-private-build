@@ -9,4 +9,4 @@ curl -fsSL --retry 3 "$RAW/build_dpo6_inj.py" -o $N/ops/dpo/build_dpo6_inj.py &&
 cd $N/mods && python3 -I -m pytest -q tests 2>&1 | tail -3
 export RUNNER_TRACKING_ID=""
 setsid nohup python3 -I $N/ops/dpo/build_dpo6_inj.py > $N/ops/dpo/build_dpo6_inj.log 2>&1 < /dev/null &
-sleep 100; tail -c 3000 $N/ops/dpo/build_dpo6_inj.log
+sleep 60; tail -c 3000 $N/ops/dpo/build_dpo6_inj.log

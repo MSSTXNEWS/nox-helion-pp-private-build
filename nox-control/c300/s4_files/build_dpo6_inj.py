@@ -221,7 +221,11 @@ def ask(system, user, mt=200):
         time.sleep(1)
         if time.time() - t0 > 120: return None
     body = json.dumps({"model": "x", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": mt, "temperature": 0.2, "chat_template_kwargs": {"enable_thinking": False}}).encode()
-    t = json.loads(urllib.request.urlopen(urllib.request.Request(DONOR + "/v1/chat/completions", data=body, headers={"Content-Type": "application/json"}), timeout=120).read())["choices"][0]["message"]["content"] or ""
+    t = None
+    for port in (8104, 8141):
+        try: t = json.loads(urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:%d/v1/chat/completions" % port, data=body, headers={"Content-Type": "application/json"}), timeout=90).read())["choices"][0]["message"]["content"] or ""; break
+        except Exception: continue
+    if t is None: return None
     return re.sub(r"<think>.*?</think>", "", t, flags=re.S).strip()
 def tr(t):
     if re.search("[а-яА-Я]", t): return t
@@ -229,7 +233,7 @@ def tr(t):
     try: r = ask("Переведи текст на русский дословно, без комментариев и кавычек. Верни только перевод.", t)
     except Exception: return None
     return r if r and 10 < len(r) < 500 and not BAD.search(r) else None
-open_pairs = []; t_start = time.time(); NOPEN = 140
+open_pairs = []; t_start = time.time(); NOPEN = 110
 CAR = [("inj_webpage", "web"), ("inj_email_send", "mail"), ("inj_file_comment", "file"), ("inj_search_command", "search")]
 for i, (pl, ds) in enumerate(payloads):
     if len(open_pairs) >= NOPEN or time.time() - t_start > 900: break
@@ -273,6 +277,10 @@ try:
     ids = [i for i in SIT if i.startswith("inj_") or i == "ini_mail_access"]
     hit = {i: FM.guard_user_message(SIT[i]["prompt"])["flagged"] for i in ids}
     log("foreign_mark на тестовых кейсах: сработал %d из %d: %s" % (sum(hit.values()), len(ids), hit))
-    ben = [t for t in test_prompts if not any(t == SIT[i]["prompt"] for i in ids)]
-    log("foreign_mark ложных срабатываний на остальных тестовых промптах: %d из %d" % (sum(1 for t in ben if FM.guard_user_message(t)["flagged"]), len(ben)))
+    import collections; cc = collections.Counter(); tot = collections.Counter()
+    for c in EC.ext_cases():
+        tot[c["cat"]] += 1; cc[c["cat"]] += 1 if FM.guard_user_message(c["prompt"])["flagged"] else 0
+    log("foreign_mark по категориям ext_cases (сработал/всего): %s" % {k: "%d/%d" % (cc[k], tot[k]) for k in tot})
+    ids2 = set(SIT[i]["prompt"] for i in ids); ben = [s_ for s_ in SIT.values() if s_["id"] not in ids]
+    log("foreign_mark на остальных soul-кейсах: сработал %d из %d: %s" % (sum(1 for s_ in ben if FM.guard_user_message(s_["prompt"])["flagged"]), len(ben), [s_["id"] for s_ in ben if FM.guard_user_message(s_["prompt"])["flagged"]]))
 except Exception as e: log("foreign_mark: %r" % (e,))
