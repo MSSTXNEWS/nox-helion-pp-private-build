@@ -4,7 +4,7 @@ N=/workspace/nox; F=$N/web/pkg/server/chat_core.py; R=https://raw.githubusercont
 [ "$(md5sum < $F | cut -c1-32)" = 14a78b6c24bee7ee5f8237527bddd2d5 ] || { echo "BASE_CHANGED abort"; echo END; exit 0; }
 W=$(mktemp -d); curl -fsSL $R/enc_in/q29.enc -o $W/e; curl -fsSL $R/enc_in/q29.key -o $W/k
 openssl pkeyutl -decrypt -inkey $N/state/keys/inbox.pem -in $W/k -out $W/kk && openssl enc -d -aes-256-cbc -pbkdf2 -in $W/e -pass file:$W/kk | tar xzf - -C $W || { echo DECRYPT_FAIL; rm -rf $W; echo END; exit 0; }
-[ "$(md5sum < $W/chat_core.py | cut -c1-32)" = 09218b07def3993bb629788eca8fc682 ] || { echo BAD_PAYLOAD; rm -rf $W; echo END; exit 0; }
+[ "$(md5sum < $W/chat_core.py | cut -c1-32)" = 31dacc95e67e9e714cfc9decea493682 ] || { echo BAD_PAYLOAD; rm -rf $W; echo END; exit 0; }
 python3 -m py_compile $W/chat_core.py || { echo COMPILE_FAIL; echo END; exit 0; }
 for i in $(seq 1 60); do c1=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8104/health); if [ "$c1" = 200 ]; then sleep 20; c2=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8104/health); [ "$c2" = 200 ] && break; fi; sleep 15; done
 [ "$c1" = 200 ] && [ "$c2" = 200 ] || { echo "BODY_DOWN abort waited=$i"; echo END; exit 0; }
@@ -159,6 +159,15 @@ print("CALIB lines=%d with_logprobs=%d"%(n,lpn))
 try:
     j=json.load(open("/workspace/nox/state/mind/ece.json")); print("ECE", {k:j.get(k) for k in ("ece","n","verdict")})
 except Exception: print("ECE none")
+PY
+
+python3 - <<'PY'
+import os
+N="/workspace/nox/state"
+def n(f):
+    try: return sum(1 for _ in open(N+"/"+f))
+    except Exception: return 0
+print("UID_MISSING_LOG lines=%d AUTONOMY_LOG lines=%d guest_on=%d"%(n("chat_uid_missing.log"),n("chat_autonomy.log"),int(os.path.exists(N+"/chat_guest.on"))))
 PY
 python3 - $G2 <<'PY'
 import sys,re,os
