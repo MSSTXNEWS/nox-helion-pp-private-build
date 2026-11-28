@@ -108,6 +108,10 @@ def p1():
     note = "окно OOM неполное (копится до 7 сут)" if src and "окно" in src and float(src.split()[-2]) < 6.9 else ""
     v = {"disk_free_gb": free, "uptime_h": up, "uptimes": ups, "oom_7d": oom, "oom_src": src}
     f = [free >= TH["disk_gb"], None if up is None else up >= TH["uptime_h"], None if oom is None else oom == TH["oom"]]
+    try:   # S4 28.11: аптайм чата за сутки от nox_uptime (цель >= 99.5%, канон гл.1)
+        ud = jl(S + "/uptime_daily.json") or {}; cu = ud.get("chat_uptime_24h"); ns = ud.get("samples_24h") or 0
+        v["chat_uptime_24h"] = cu; v["chat_uptime_samples"] = ns; f.append(None if cu is None or ns < 120 else cu >= 0.995)
+    except Exception: pass
     why = "; ".join(x for x in ["диск %.1f<15" % free if f[0] is False else "", "аптайм %.1f ч<168 (с последнего рестарта %s)" % (up, min(ups, key=lambda k: ups[k] if ups[k] is not None else 1e9)) if f[1] is False else "", "OOM %s>0" % oom if f[2] is False else "", note] if x)
     return v, f, "порог: аптайм>=168 ч, OOM 7 сут=0, диск>=15 ГБ. " + why
 def p2(probe):
